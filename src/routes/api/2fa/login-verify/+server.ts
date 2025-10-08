@@ -6,11 +6,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const { email, code } = await request.json();
     
+    console.log('2FA login verification request:', { email, code: code ? 'provided' : 'missing' });
+    
     if (!email || !code) {
       return json({ error: 'Email and code are required' }, { status: 400 });
     }
 
-    // Get user from email
+    // Try to get user by email using admin API
     const { data: { users }, error: userError } = await locals.supabase.auth.admin.listUsers();
     
     if (userError) {
@@ -18,17 +20,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Failed to verify user' }, { status: 500 });
     }
 
+    console.log('Found users:', users.length);
+    
     const user = users.find(u => u.email === email);
     
     if (!user) {
+      console.log('User not found for email:', email);
       return json({ error: 'User not found' }, { status: 404 });
     }
+
+    console.log('User found:', user.email, 'Metadata:', user.user_metadata);
 
     // Check if user has 2FA enabled
     const twoFactorEnabled = user.user_metadata?.two_factor_enabled;
     const twoFactorSecret = user.user_metadata?.two_factor_secret;
 
+    console.log('2FA status:', { enabled: twoFactorEnabled, hasSecret: !!twoFactorSecret });
+
     if (!twoFactorEnabled || !twoFactorSecret) {
+      console.log('2FA not properly configured for user');
       return json({ error: '2FA not enabled for this user' }, { status: 400 });
     }
 
@@ -39,6 +49,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       token: code,
       window: 2
     });
+
+    console.log('Code verification result:', verified);
 
     if (verified) {
       console.log('2FA verification successful for user:', email);
@@ -54,6 +66,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         return json({ error: 'Failed to create session' }, { status: 500 });
       }
 
+      console.log('Session created successfully');
       return json({ 
         success: true,
         user: sessionData.user,
