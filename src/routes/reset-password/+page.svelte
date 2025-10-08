@@ -81,9 +81,9 @@
       if (error) {
         errorMessage = error.message;
       } else {
-        successMessage = 'Password updated successfully! Redirecting to login...';
+        successMessage = 'Password updated successfully! You are now logged in. Redirecting...';
         setTimeout(() => {
-          goto('/login');
+          goto('/');
         }, 2000);
       }
     } catch (err) {
