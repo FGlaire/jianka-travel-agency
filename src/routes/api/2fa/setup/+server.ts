@@ -24,8 +24,11 @@ export const POST: RequestHandler = async ({ request, locals, cookies }) => {
     
     if (!user) {
       console.error('No user found. Session error:', sessionError);
+      console.error('Available cookies:', cookies.getAll());
       return json({ error: 'Not authenticated' }, { status: 401 });
     }
+
+    console.log('User found:', user.email);
 
     // Generate a new secret
     const secret = speakeasy.generateSecret({
