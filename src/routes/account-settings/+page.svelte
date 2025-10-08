@@ -672,7 +672,18 @@
     border-radius: 8px;
     font-size: 1rem;
     transition: all 0.3s ease;
-    background: white;
+    background: white !important;
+    background-color: white !important;
+  }
+
+  /* Override browser autofill styling */
+  .form-group input:-webkit-autofill,
+  .form-group input:-webkit-autofill:hover,
+  .form-group input:-webkit-autofill:focus,
+  .form-group input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #2c2c2c !important;
+    background-color: white !important;
   }
 
   .form-group input:focus {
