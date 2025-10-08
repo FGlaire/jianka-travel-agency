@@ -52,15 +52,28 @@
   .transition-overlay {
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-      135deg,
-      rgba(0, 0, 0, 0.9) 0%,
-      rgba(26, 26, 26, 0.85) 50%,
-      rgba(0, 0, 0, 0.9) 100%
-    );
-    backdrop-filter: blur(8px);
+    background: #000000;
     transform: translateY(100%);
     transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+  
+  .transition-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+      radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+      radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.005) 2px, transparent 2px),
+      radial-gradient(circle at 10% 60%, rgba(255, 255, 255, 0.008) 1px, transparent 1px),
+      radial-gradient(circle at 90% 40%, rgba(255, 255, 255, 0.006) 1px, transparent 1px);
+    background-size: 100px 100px, 80px 80px, 120px 120px, 60px 60px, 90px 90px;
+    animation: patternMove 30s linear infinite;
+    opacity: 0.3;
   }
   
   .page-transition.active .transition-overlay {
@@ -84,5 +97,14 @@
   
   :global(.menu-link:hover) {
     transform: translateX(8px);
+  }
+  
+  @keyframes patternMove {
+    0% {
+      transform: translate(0, 0);
+    }
+    100% {
+      transform: translate(50px, 50px);
+    }
   }
 </style>
