@@ -24,6 +24,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // Create admin client for admin operations if service role key is available
   if (supabaseServiceRoleKey) {
+    console.log('Creating admin client with service role key');
     event.locals.supabaseAdmin = createServerClient(supabaseUrl, supabaseServiceRoleKey, {
       cookies: {
         get: (key: string) => event.cookies.get(key),
@@ -36,6 +37,9 @@ export const handle: Handle = async ({ event, resolve }) => {
         detectSessionInUrl: false
       }
     });
+    console.log('Admin client created successfully');
+  } else {
+    console.log('Service role key not available, admin client not created');
   }
 
   return resolve(event);

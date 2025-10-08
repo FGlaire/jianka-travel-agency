@@ -35,6 +35,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }, { status: 503 });
     }
 
+    console.log('Using admin client for listUsers');
     const { data: { users }, error: userError } = await locals.supabaseAdmin.auth.admin.listUsers();
     
     if (userError) {
