@@ -134,10 +134,19 @@
     successMessage = '';
 
     try {
+      // First, refresh the session to ensure we have valid auth
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        errorMessage = 'Please log in again to set up 2FA';
+        return;
+      }
+
       const response = await fetch('/api/2fa/setup', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         credentials: 'include'
       });

@@ -5,29 +5,21 @@ import QRCode from 'qrcode';
 
 export const POST: RequestHandler = async ({ request, locals, cookies }) => {
   try {
-    // Try multiple methods to get the user
-    let user = null;
+    // Get the authorization header from the request
+    const authHeader = request.headers.get('authorization');
+    console.log('Auth header:', authHeader);
     
-    // Method 1: Try getSession
+    // Try to get user from session
     const { data: { session }, error: sessionError } = await locals.supabase.auth.getSession();
-    if (session?.user) {
-      user = session.user;
-    }
+    console.log('Session:', session ? 'exists' : 'null');
+    console.log('Session error:', sessionError);
     
-    // Method 2: Try getUser if session failed
-    if (!user) {
-      const { data: { user: authUser }, error: userError } = await locals.supabase.auth.getUser();
-      if (authUser) {
-        user = authUser;
-      }
-    }
-    
-    if (!user) {
-      console.error('No user found. Session error:', sessionError);
-      console.error('Available cookies:', cookies.getAll());
-      return json({ error: 'Not authenticated' }, { status: 401 });
+    if (!session?.user) {
+      console.error('No session found');
+      return json({ error: 'Not authenticated - please log in again' }, { status: 401 });
     }
 
+    const user = session.user;
     console.log('User found:', user.email);
 
     // Generate a new secret

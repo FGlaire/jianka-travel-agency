@@ -23,15 +23,13 @@ body {
 	overflow-x: hidden; /* prevent horizontal scroll */
 }
 
-/* Fix double scrollbar issue */
+/* Fix double scrollbar issue - restore scrolling */
 html {
 	overflow-y: auto;
-	height: 100%;
 }
 
 body {
 	overflow-y: auto;
-	height: 100%;
 }
 
 /* Ensure no double scrollbars */
