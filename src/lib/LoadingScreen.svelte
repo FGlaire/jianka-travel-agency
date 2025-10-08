@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade, fly } from 'svelte/transition';
+  import { fade } from 'svelte/transition';
   
   let count = 0;
   let isLoading = true;
@@ -27,22 +27,22 @@
 </script>
 
 {#if isLoading}
-  <div class="loading-screen" transition:fade={{ duration: 800 }}>
+  <div class="loading-screen" transition:fade={{ duration: 1000 }}>
     <div class="loading-content">
-      <div class="countdown" transition:fly={{ y: 50, duration: 600, delay: 200 }}>
+      <div class="countdown" transition:fade={{ duration: 800, delay: 300 }}>
         {String(count).padStart(3, '0')}
       </div>
       {#if showBrand}
-        <div class="loading-text" transition:fly={{ y: 30, duration: 500, delay: 400 }}>
+        <div class="loading-text" transition:fade={{ duration: 600, delay: 500 }}>
           JIANKA
         </div>
-        <div class="loading-subtitle" transition:fly={{ y: 20, duration: 400, delay: 600 }}>
+        <div class="loading-subtitle" transition:fade={{ duration: 500, delay: 700 }}>
           Travel Agency
         </div>
       {/if}
     </div>
     
-    <!-- Subtle background pattern -->
+    <!-- Black background with textures -->
     <div class="loading-pattern"></div>
   </div>
 {/if}
@@ -54,7 +54,7 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+    background: #000000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -124,11 +124,15 @@
     width: 100%;
     height: 100%;
     background-image: 
-      radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-    background-size: 50px 50px;
-    animation: patternMove 20s linear infinite;
+      radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+      radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+      radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.005) 2px, transparent 2px),
+      radial-gradient(circle at 10% 60%, rgba(255, 255, 255, 0.008) 1px, transparent 1px),
+      radial-gradient(circle at 90% 40%, rgba(255, 255, 255, 0.006) 1px, transparent 1px);
+    background-size: 100px 100px, 80px 80px, 120px 120px, 60px 60px, 90px 90px;
+    animation: patternMove 30s linear infinite;
     z-index: 1;
+    opacity: 0.3;
   }
   
   @keyframes pulse {
