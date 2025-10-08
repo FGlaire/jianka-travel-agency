@@ -51,9 +51,12 @@
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/`
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/`,
+          shouldCreateUser: true // Allow creating user if they don't exist
         }
       });
+
+      console.log('Magic link request result:', { error: error?.message, success: !error });
 
       if (error) {
         errorMessage = error.message;
