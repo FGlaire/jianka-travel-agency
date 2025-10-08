@@ -58,7 +58,7 @@
       if (error) {
         errorMessage = error.message;
       } else {
-        successMessage = 'Magic link sent! Please check your inbox and click the link to instantly log in.';
+        successMessage = 'Password reset link sent! Please check your inbox and click the link to instantly log in.';
         email = '';
         captchaToken = '';
       }
@@ -84,13 +84,13 @@
 </script>
 
 <svelte:head>
-  <title>Magic Link Login - JIANKA Travel Agency</title>
+  <title>Forgot Password - JIANKA Travel Agency</title>
 </svelte:head>
 
 <div class="auth-container">
   <div class="auth-card">
     <div class="auth-header">
-      <h1>Magic Link Login</h1>
+      <h1>Forgot Password?</h1>
       <p>Enter your email address and we'll send you a magic link to instantly log in</p>
     </div>
 
@@ -130,9 +130,9 @@
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
               <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
             </svg>
-            Sending Magic Link...
+            Sending Reset Link...
           {:else}
-            Send Magic Link
+            Send Reset Link
           {/if}
         </button>
       </div>

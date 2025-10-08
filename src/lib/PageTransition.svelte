@@ -6,8 +6,18 @@
   let isTransitioning = false;
   let currentPage = '';
   let transitionKey = 0;
+  let initialLoadComplete = false;
   
-  $: if ($page.route.id !== currentPage) {
+  // Wait for initial loading screen to complete before enabling transitions
+  onMount(() => {
+    // Wait for loading screen to complete (2.8 seconds total)
+    setTimeout(() => {
+      initialLoadComplete = true;
+      currentPage = $page.route.id;
+    }, 2800);
+  });
+  
+  $: if (initialLoadComplete && $page.route.id !== currentPage) {
     if (currentPage !== '') {
       startTransition();
     }
@@ -21,10 +31,6 @@
       isTransitioning = false;
     }, 800);
   }
-  
-  onMount(() => {
-    currentPage = $page.route.id;
-  });
 </script>
 
 <div class="page-transition" class:active={isTransitioning}>
