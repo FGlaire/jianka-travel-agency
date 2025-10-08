@@ -3,7 +3,11 @@ import { createServerClient } from '@supabase/ssr';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
 export const handle: Handle = async ({ event, resolve }) => {
-  event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+  // Fallback values for build time
+  const supabaseUrl = PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+  const supabaseAnonKey = PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+
+  event.locals.supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get: (key: string) => event.cookies.get(key),
       set: (key: string, value: string, options) => event.cookies.set(key, value, { path: '/', ...options }),
