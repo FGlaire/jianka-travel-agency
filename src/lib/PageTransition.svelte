@@ -88,12 +88,16 @@
   
   /* Enhanced page content transitions */
   :global(main) {
-    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    opacity: 0;
+    transition: opacity 0.6s ease-out;
   }
   
   :global(.page-transition.active ~ main) {
-    opacity: 0.2;
-    transform: scale(0.95);
+    opacity: 0;
+  }
+  
+  :global(.page-transition:not(.active) ~ main) {
+    opacity: 1;
   }
   
   /* Smooth navigation transitions */

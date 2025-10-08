@@ -48,18 +48,36 @@
         return;
       }
 
-      const { error } = await supabase.auth.signInWithOtp({
+      // Try magic link login first
+      const { error: otpError } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/`,
-          shouldCreateUser: true // Allow creating user if they don't exist
+          shouldCreateUser: true
         }
       });
 
-      console.log('Magic link request result:', { error: error?.message, success: !error });
+      console.log('Magic link request result:', { error: otpError?.message, success: !otpError });
 
-      if (error) {
-        errorMessage = error.message;
+      let finalError = otpError;
+
+      // If magic link fails, try password reset as fallback
+      if (otpError) {
+        console.log('Magic link failed, trying password reset:', otpError.message);
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/callback?next=/`
+        });
+        
+        if (resetError) {
+          console.log('Password reset also failed:', resetError.message);
+          finalError = resetError;
+        } else {
+          finalError = null; // Password reset succeeded
+        }
+      }
+
+      if (finalError) {
+        errorMessage = finalError.message;
       } else {
         successMessage = 'Password reset link sent! Please check your inbox and click the link to instantly log in.';
         email = '';
