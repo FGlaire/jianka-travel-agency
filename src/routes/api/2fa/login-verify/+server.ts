@@ -27,7 +27,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Try to get user by email using admin API with service role
-    const { data: { users }, error: userError } = await locals.supabase.auth.admin.listUsers();
+    if (!locals.supabaseAdmin) {
+      console.error('Admin client not available');
+      return json({ 
+        error: '2FA verification service not properly configured',
+        details: 'Admin client not available'
+      }, { status: 503 });
+    }
+
+    const { data: { users }, error: userError } = await locals.supabaseAdmin.auth.admin.listUsers();
     
     if (userError) {
       console.error('Error fetching users:', userError);
@@ -75,7 +83,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       console.log('2FA verification successful for user:', email);
       
       // Create a session for the user after successful 2FA verification
-      const { data: sessionData, error: sessionError } = await locals.supabase.auth.admin.createSession({
+      const { data: sessionData, error: sessionError } = await locals.supabaseAdmin.auth.admin.createSession({
         user_id: user.id,
         expires_in: 60 * 60 * 24 * 7 // 7 days
       });
