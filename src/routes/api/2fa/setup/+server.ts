@@ -9,17 +9,34 @@ export const POST: RequestHandler = async ({ request, locals, cookies }) => {
     const authHeader = request.headers.get('authorization');
     console.log('Auth header:', authHeader);
     
-    // Try to get user from session
+    let user = null;
+    
+    // Method 1: Try to get user from session
     const { data: { session }, error: sessionError } = await locals.supabase.auth.getSession();
     console.log('Session:', session ? 'exists' : 'null');
     console.log('Session error:', sessionError);
     
-    if (!session?.user) {
-      console.error('No session found');
+    if (session?.user) {
+      user = session.user;
+    } else if (authHeader) {
+      // Method 2: If no session but we have auth header, try to verify the JWT directly
+      const token = authHeader.replace('Bearer ', '');
+      console.log('Trying to verify JWT directly...');
+      
+      const { data: { user: jwtUser }, error: jwtError } = await locals.supabase.auth.getUser(token);
+      console.log('JWT verification result:', jwtUser ? 'success' : 'failed');
+      console.log('JWT error:', jwtError);
+      
+      if (jwtUser) {
+        user = jwtUser;
+      }
+    }
+    
+    if (!user) {
+      console.error('No user found after trying all methods');
       return json({ error: 'Not authenticated - please log in again' }, { status: 401 });
     }
 
-    const user = session.user;
     console.log('User found:', user.email);
 
     // Generate a new secret

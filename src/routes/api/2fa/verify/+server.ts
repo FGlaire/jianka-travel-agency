@@ -4,15 +4,30 @@ import * as speakeasy from 'speakeasy';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
-    // Get the session from cookies
+    // Get the authorization header from the request
+    const authHeader = request.headers.get('authorization');
+    
+    let user = null;
+    
+    // Method 1: Try to get user from session
     const { data: { session }, error: sessionError } = await locals.supabase.auth.getSession();
     
-    if (sessionError || !session?.user) {
-      console.error('Session error:', sessionError);
-      return json({ error: 'Not authenticated' }, { status: 401 });
+    if (session?.user) {
+      user = session.user;
+    } else if (authHeader) {
+      // Method 2: If no session but we have auth header, try to verify the JWT directly
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user: jwtUser }, error: jwtError } = await locals.supabase.auth.getUser(token);
+      
+      if (jwtUser) {
+        user = jwtUser;
+      }
     }
-
-    const user = session.user;
+    
+    if (!user) {
+      console.error('No user found after trying all methods');
+      return json({ error: 'Not authenticated - please log in again' }, { status: 401 });
+    }
 
     const { secret, code } = await request.json();
 
