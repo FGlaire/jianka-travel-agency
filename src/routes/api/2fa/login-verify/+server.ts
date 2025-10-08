@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import * as speakeasy from 'speakeasy';
+import { createClient } from '@supabase/supabase-js';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
@@ -26,17 +27,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }, { status: 503 });
     }
 
-    // Try to get user by email using admin API with service role
-    if (!locals.supabaseAdmin) {
-      console.error('Admin client not available');
+    // Create admin client directly with service role key
+    const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Missing Supabase configuration:', { 
+        hasUrl: !!supabaseUrl, 
+        hasServiceKey: !!supabaseServiceRoleKey 
+      });
       return json({ 
         error: '2FA verification service not properly configured',
-        details: 'Admin client not available'
+        details: 'Missing Supabase configuration'
       }, { status: 503 });
     }
 
-    console.log('Using admin client for listUsers');
-    const { data: { users }, error: userError } = await locals.supabaseAdmin.auth.admin.listUsers();
+    console.log('Creating direct admin client');
+    const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    console.log('Using direct admin client for listUsers');
+    const { data: { users }, error: userError } = await adminClient.auth.admin.listUsers();
     
     if (userError) {
       console.error('Error fetching users:', userError);
@@ -84,7 +99,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       console.log('2FA verification successful for user:', email);
       
       // Create a session for the user after successful 2FA verification
-      const { data: sessionData, error: sessionError } = await locals.supabaseAdmin.auth.admin.createSession({
+      const { data: sessionData, error: sessionError } = await adminClient.auth.admin.createSession({
         user_id: user.id,
         expires_in: 60 * 60 * 24 * 7 // 7 days
       });
