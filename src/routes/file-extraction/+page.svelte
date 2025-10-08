@@ -142,7 +142,8 @@
       };
 
       uploadedFiles = [...uploadedFiles, fileObj];
-      showUploadArea = false;
+      // Don't hide upload area - allow multiple file uploads
+      // showUploadArea = false;
 
       setTimeout(() => {
         isUploading = false;
@@ -179,7 +180,11 @@
     try {
       // First, detect duplicates based on ID, email, and passport number
       const duplicateFields = ['id', 'email', 'passportNumber'];
+      console.log('Checking for duplicates with fields:', duplicateFields);
+      console.log('Sample data:', selectedFile.data.slice(0, 2));
       const { duplicates, uniqueData } = detectDuplicates(selectedFile.data, duplicateFields);
+      console.log('Duplicates found:', duplicates.length);
+      console.log('Unique data:', uniqueData.length);
       
       // Process and validate data
       const processedData = uniqueData.map((row: any, index: number) => {
@@ -291,8 +296,26 @@
     const uniqueData: any[] = [];
     
     data.forEach((row, index) => {
-      // Create a composite key from specified fields
-      const compositeKey = keyFields.map(field => (row[field] || '').toString().toLowerCase()).join('|');
+      // Create a composite key from specified fields, filtering out empty values
+      const compositeKey = keyFields
+        .map(field => {
+          const value = row[field];
+          // Only include non-empty values in the composite key
+          return value && value.toString().trim() !== '' ? value.toString().toLowerCase().trim() : '';
+        })
+        .filter(val => val !== '') // Remove empty values
+        .join('|');
+      
+      // Skip rows where all key fields are empty
+      if (compositeKey === '') {
+        const uniqueRow = {
+          ...row,
+          _isDuplicate: false,
+          _originalIndex: index
+        };
+        uniqueData.push(uniqueRow);
+        return;
+      }
       
       if (seen.has(compositeKey)) {
         // This is a duplicate
@@ -339,6 +362,7 @@
     extractedData = [];
     successData = [];
     failedData = [];
+    uploadedFiles = [];
   }
 </script>
 
@@ -396,7 +420,16 @@
 
       {#if uploadedFiles.length > 0}
         <div class="uploaded-files">
-          <h3>Uploaded Files ({uploadedFiles.length})</h3>
+          <div class="uploaded-files-header">
+            <h3>Uploaded Files ({uploadedFiles.length})</h3>
+            <button class="add-more-btn" on:click={() => fileInput?.click()}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add More Files
+            </button>
+          </div>
           <div class="file-list">
             {#each uploadedFiles as file (file.id)}
               <div 
@@ -727,10 +760,39 @@
     margin-top: 2rem;
   }
 
+  .uploaded-files-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
   .uploaded-files h3 {
     font-size: 1.2rem;
-    margin: 0 0 1rem 0;
+    margin: 0;
     color: #ffffff;
+  }
+
+  .add-more-btn {
+    background: #333333;
+    color: #ffffff;
+    border: 1px solid #555555;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .add-more-btn:hover {
+    background: #555555;
+    border-color: #777777;
   }
 
   .file-list {
