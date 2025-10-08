@@ -204,16 +204,24 @@
             <span class="menu-number">01</span>
             <span class="menu-text">HOME</span>
           </a>
-          <a href="/about" class="menu-link" onclick={handleMenuLinkClick}>
+          <a href="/" class="menu-link" onclick={handleMenuLinkClick}>
             <span class="menu-number">02</span>
             <span class="menu-text">ABOUT</span>
           </a>
-          <a href="/login" class="menu-link" onclick={handleMenuLinkClick}>
+          <a href="/file-extraction" class="menu-link" onclick={handleMenuLinkClick}>
             <span class="menu-number">03</span>
+            <span class="menu-text">FILE EXTRACTION</span>
+          </a>
+          <a href="/field-mapping" class="menu-link" onclick={handleMenuLinkClick}>
+            <span class="menu-number">04</span>
+            <span class="menu-text">FIELD MAPPING</span>
+          </a>
+          <a href="/login" class="menu-link" onclick={handleMenuLinkClick}>
+            <span class="menu-number">05</span>
             <span class="menu-text">LOGIN</span>
           </a>
           <a href="/account-settings" class="menu-link" onclick={handleMenuLinkClick}>
-            <span class="menu-number">04</span>
+            <span class="menu-number">06</span>
             <span class="menu-text">ACCOUNT</span>
           </a>
         </nav>
