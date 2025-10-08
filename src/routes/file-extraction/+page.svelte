@@ -12,6 +12,11 @@
     uploadDate: Date;
     data: any[];
     columns: string[];
+    columnValidation?: {
+      isValid: boolean;
+      errors: string[];
+      warnings: string[];
+    };
   }> = [];
 
   // Extraction state
@@ -362,7 +367,13 @@
             style="display: none;"
           />
           
-          <div class="upload-content" on:click={() => fileInput?.click()}>
+          <div 
+            class="upload-content" 
+            role="button"
+            tabindex="0"
+            on:click={() => fileInput?.click()}
+            on:keydown={(e) => e.key === 'Enter' && fileInput?.click()}
+          >
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7,10 12,15 17,10"/>
@@ -388,7 +399,14 @@
           <h3>Uploaded Files ({uploadedFiles.length})</h3>
           <div class="file-list">
             {#each uploadedFiles as file (file.id)}
-              <div class="file-item" class:selected={selectedFile?.id === file.id} on:click={() => selectFile(file)}>
+              <div 
+                class="file-item" 
+                class:selected={selectedFile?.id === file.id} 
+                role="button"
+                tabindex="0"
+                on:click={() => selectFile(file)}
+                on:keydown={(e) => e.key === 'Enter' && selectFile(file)}
+              >
                 <div class="file-info">
                   <div class="file-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -530,7 +548,7 @@
             <thead>
               <tr>
                 <th>Row</th>
-                {#each travelFields.slice(0, 10) as field}
+                {#each travelFields as field}
                   <th>{field.name}</th>
                 {/each}
                 {#if activeTab === 'failed'}
@@ -547,7 +565,7 @@
                       <span class="duplicate-badge">DUP</span>
                     {/if}
                   </td>
-                  {#each travelFields.slice(0, 10) as field}
+                  {#each travelFields as field}
                     <td>{row[field.key] || '-'}</td>
                   {/each}
                   {#if activeTab === 'failed'}
@@ -661,6 +679,15 @@
     background: #1a1a1a;
   }
 
+  .upload-content {
+    outline: none;
+  }
+
+  .upload-content:focus {
+    outline: 2px solid #cb9f4d;
+    outline-offset: 2px;
+  }
+
   .upload-content svg {
     color: #9a9a9a;
     margin-bottom: 1rem;
@@ -734,6 +761,11 @@
     background: #1a1a1a;
   }
 
+  .file-item:focus {
+    outline: 2px solid #cb9f4d;
+    outline-offset: 2px;
+  }
+
   .file-info {
     display: flex;
     align-items: center;
@@ -781,11 +813,13 @@
     overflow-x: auto;
     border-radius: 8px;
     border: 1px solid #333333;
+    max-width: 100%;
   }
 
   .files-table,
   .results-table {
     width: 100%;
+    min-width: 1200px;
     border-collapse: collapse;
     background: #0f0f0f;
   }
@@ -794,17 +828,24 @@
   .results-table th {
     background: #1a1a1a;
     color: #ffffff;
-    padding: 1rem;
+    padding: 0.75rem 0.5rem;
     text-align: left;
     font-weight: 600;
     border-bottom: 1px solid #333333;
+    white-space: nowrap;
+    font-size: 0.9rem;
   }
 
   .files-table td,
   .results-table td {
-    padding: 1rem;
+    padding: 0.75rem 0.5rem;
     border-bottom: 1px solid #333333;
     color: #ffffff;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .files-table tr:hover,
@@ -1039,14 +1080,20 @@
     }
 
     .table-container {
-      font-size: 0.9rem;
+      font-size: 0.8rem;
+    }
+
+    .files-table,
+    .results-table {
+      min-width: 1000px;
     }
 
     .files-table th,
     .results-table th,
     .files-table td,
     .results-table td {
-      padding: 0.75rem 0.5rem;
+      padding: 0.5rem 0.25rem;
+      font-size: 0.8rem;
     }
   }
 </style>
