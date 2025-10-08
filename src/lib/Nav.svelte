@@ -103,13 +103,13 @@
 
   function handleMenuLinkClick(event: MouseEvent) {
     const target = event.currentTarget as HTMLAnchorElement;
-    const href = target.getAttribute('href');
+    const menuText = target.querySelector('.menu-text')?.textContent;
     
     // Close the menu with animation
     closeMenu();
     
     // Handle smooth scrolling to About section
-    if (href === '/#about') {
+    if (menuText === 'ABOUT') {
       event.preventDefault();
       setTimeout(() => {
         const aboutSection = document.getElementById('about');
@@ -222,7 +222,7 @@
             <span class="menu-number">01</span>
             <span class="menu-text">HOME</span>
           </a>
-          <a href="/#about" class="menu-link" onclick={handleMenuLinkClick}>
+          <a href="/" class="menu-link" onclick={handleMenuLinkClick}>
             <span class="menu-number">02</span>
             <span class="menu-text">ABOUT</span>
           </a>
