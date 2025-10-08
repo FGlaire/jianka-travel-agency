@@ -183,6 +183,7 @@
               required
               disabled={isLoading}
               placeholder="Enter your password"
+              class="password-field"
             />
             <button
               type="button"
@@ -348,9 +349,12 @@
 
   .password-input {
     position: relative;
+    width: 100%;
   }
 
-  .password-input input[type="password"] {
+  .password-field {
+    width: 100%;
+    padding-right: 3rem; /* Make room for the toggle button */
     font-family: 'Courier New', monospace;
     font-size: 1rem;
     letter-spacing: 0.1em;
@@ -367,6 +371,7 @@
     padding: 0.5rem;
     color: #666;
     transition: color 0.3s ease;
+    z-index: 10;
   }
 
   .password-toggle:hover {
