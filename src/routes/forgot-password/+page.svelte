@@ -222,9 +222,7 @@
   }
 
   .g-recaptcha {
-    display: flex;
-    justify-content: center;
-    margin: 1rem 0;
+    display: none;
   }
 
   .form-actions {
