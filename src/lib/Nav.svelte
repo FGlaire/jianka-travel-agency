@@ -204,7 +204,7 @@
             <span class="menu-number">01</span>
             <span class="menu-text">HOME</span>
           </a>
-          <a href="/" class="menu-link" onclick={handleMenuLinkClick}>
+          <a href="/about" class="menu-link" onclick={handleMenuLinkClick}>
             <span class="menu-number">02</span>
             <span class="menu-text">ABOUT</span>
           </a>

@@ -113,20 +113,36 @@
 		// City hover effects with image changes
 		const cities = document.querySelectorAll('.city');
 		const cityImage = document.getElementById('city-image') as HTMLImageElement;
+		let currentImageTimeout: NodeJS.Timeout | null = null;
 
 		cities.forEach(city => {
 			const cityName = city.getAttribute('data-city');
 			if (!cityName) return;
 			const imagePath = `/images/${cityName.toLowerCase().replace(' ', '_')}.jpg`;
 
-			city.addEventListener('mouseenter', async () => {
-				// Change image
-				if (cityImage) {
-					gsap.to(cityImage, { opacity: 0, duration: 0.3, ease: 'power2.out' });
-					setTimeout(() => {
+			city.addEventListener('mouseenter', () => {
+				// Clear any pending image change
+				if (currentImageTimeout) {
+					clearTimeout(currentImageTimeout);
+					currentImageTimeout = null;
+				}
+
+				// Change image with improved timing
+				if (cityImage && cityImage.src !== imagePath) {
+					gsap.to(cityImage, { opacity: 0, duration: 0.2, ease: 'power2.out' });
+					currentImageTimeout = setTimeout(() => {
 						cityImage.src = imagePath;
-						gsap.to(cityImage, { opacity: 1, duration: 0.4, ease: 'power2.out' });
-					}, 150);
+						gsap.to(cityImage, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+						currentImageTimeout = null;
+					}, 100);
+				}
+			});
+
+			city.addEventListener('mouseleave', () => {
+				// Clear any pending image change when leaving
+				if (currentImageTimeout) {
+					clearTimeout(currentImageTimeout);
+					currentImageTimeout = null;
 				}
 			});
 		});
