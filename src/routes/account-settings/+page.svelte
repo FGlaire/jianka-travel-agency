@@ -172,10 +172,19 @@
     successMessage = '';
 
     try {
+      // First, refresh the session to ensure we have valid auth
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        errorMessage = 'Please log in again to verify 2FA';
+        return;
+      }
+
       const response = await fetch('/api/2fa/verify', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -207,10 +216,19 @@
     successMessage = '';
 
     try {
+      // First, refresh the session to ensure we have valid auth
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        errorMessage = 'Please log in again to disable 2FA';
+        return;
+      }
+
       const response = await fetch('/api/2fa/disable', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         credentials: 'include'
       });
@@ -448,6 +466,22 @@
               <div class="two-factor-setup">
                 <p>Scan this QR code with your authenticator app:</p>
                 <img src={twoFactorQrCode} alt="2FA QR Code" class="qr-code" />
+                
+                <div class="setup-key-section">
+                  <p><strong>Or enter this setup key manually:</strong></p>
+                  <div class="setup-key-container">
+                    <code class="setup-key">{twoFactorSecret}</code>
+                    <button 
+                      type="button" 
+                      class="copy-button" 
+                      onclick={() => navigator.clipboard.writeText(twoFactorSecret)}
+                      title="Copy setup key"
+                    >
+                      📋 Copy
+                    </button>
+                  </div>
+                </div>
+                
                 <div class="form-group">
                   <label for="twoFactorCode">Enter verification code:</label>
                   <input
@@ -775,6 +809,49 @@
     font-size: 1.2rem;
     letter-spacing: 0.2em;
     font-family: monospace;
+  }
+
+  .setup-key-section {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+
+  .setup-key-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .setup-key {
+    flex: 1;
+    background: #fff;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    word-break: break-all;
+    user-select: all;
+  }
+
+  .copy-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+  }
+
+  .copy-button:hover {
+    background: #0056b3;
   }
 
   .two-factor-actions {
