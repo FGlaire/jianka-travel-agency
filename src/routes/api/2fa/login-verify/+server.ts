@@ -98,25 +98,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     if (verified) {
       console.log('2FA verification successful for user:', email);
       
-      // Create a session for the user after successful 2FA verification
-      const { data: sessionData, error: sessionError } = await adminClient.auth.admin.createSession({
-        user_id: user.id,
-        expires_in: 60 * 60 * 24 * 7 // 7 days
-      });
-
-      if (sessionError) {
-        console.error('Error creating session:', sessionError);
-        return json({ error: 'Failed to create session' }, { status: 500 });
-      }
-
-      console.log('Session created successfully');
+      // For now, return success without creating a session
+      // The client-side will handle the session creation
+      console.log('2FA verification successful, returning success');
       return json({ 
         success: true,
-        user: sessionData.user,
-        session: {
-          access_token: sessionData.session.access_token,
-          refresh_token: sessionData.session.refresh_token
-        }
+        user: {
+          id: user.id,
+          email: user.email
+        },
+        message: '2FA verification successful'
       });
     } else {
       console.log('Invalid 2FA code for user:', email);

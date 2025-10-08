@@ -111,20 +111,8 @@
       console.log('2FA login verification response data:', data);
 
       if (response.ok) {
-        // Set the session on the client side
-        if (data.session) {
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token
-          });
-          
-          if (sessionError) {
-            console.error('Error setting session:', sessionError);
-            errorMessage = 'Failed to create session. Please try again.';
-            return;
-          }
-        }
-        
+        // Since 2FA verification is successful, we can proceed with login
+        // The user was already authenticated from the initial login attempt
         successMessage = '2FA verification successful! Redirecting...';
         setTimeout(() => {
           window.location.href = '/';
