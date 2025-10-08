@@ -53,44 +53,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     console.log('Verification result:', verified);
 
     if (verified) {
-      // Create a new session with the JWT token to enable user metadata updates
-      if (!authHeader) {
-        console.error('No auth header available for session creation');
-        return json({ error: 'Authentication required' }, { status: 401 });
-      }
-      
-      const token = authHeader.replace('Bearer ', '');
-      
-      // Set the session using the JWT token
-      const { data: sessionData, error: sessionError } = await locals.supabase.auth.setSession({
-        access_token: token,
-        refresh_token: '' // We don't have refresh token from JWT
-      });
-      
-      if (sessionError) {
-        console.error('Error setting session:', sessionError);
-        // Fallback: return success without persisting
-        return json({ 
-          success: true,
-          message: '2FA enabled successfully! Please save your backup codes securely.'
-        });
-      }
-      
-      // Now update user metadata
-      const { error } = await locals.supabase.auth.updateUser({
-        data: { 
+      // Update user metadata directly using admin API
+      const { error } = await locals.supabase.auth.admin.updateUserById(user.id, {
+        user_metadata: {
+          ...user.user_metadata,
           two_factor_enabled: true, 
           two_factor_secret: secret 
         }
       });
 
       if (error) {
-        console.error('Error updating user:', error);
+        console.error('Error updating user metadata:', error);
         return json({ error: error.message }, { status: 500 });
       }
 
       console.log('2FA enabled successfully for user:', user.email);
-      return json({ success: true });
+      return json({ 
+        success: true,
+        message: '2FA enabled successfully! Please save your backup codes securely.'
+      });
     } else {
       console.log('Invalid verification code provided');
       return json({ error: 'Invalid verification code' }, { status: 400 });

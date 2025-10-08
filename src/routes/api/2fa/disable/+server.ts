@@ -28,39 +28,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Not authenticated - please log in again' }, { status: 401 });
     }
 
-    // Create a new session with the JWT token to enable user metadata updates
-    if (!authHeader) {
-      console.error('No auth header available for session creation');
-      return json({ error: 'Authentication required' }, { status: 401 });
-    }
-    
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Set the session using the JWT token
-    const { data: sessionData, error: setSessionError } = await locals.supabase.auth.setSession({
-      access_token: token,
-      refresh_token: '' // We don't have refresh token from JWT
-    });
-    
-    if (setSessionError) {
-      console.error('Error setting session:', setSessionError);
-      // Fallback: return success without persisting
-      return json({ 
-        success: true,
-        message: '2FA disabled successfully!'
-      });
-    }
-    
-    // Update user metadata to disable 2FA
-    const { error } = await locals.supabase.auth.updateUser({
-      data: { 
+    // Update user metadata to disable 2FA using admin API
+    const { error } = await locals.supabase.auth.admin.updateUserById(user.id, {
+      user_metadata: {
+        ...user.user_metadata,
         two_factor_enabled: false, 
         two_factor_secret: null 
       }
     });
 
     if (error) {
-      console.error('Error updating user:', error);
+      console.error('Error updating user metadata:', error);
       return json({ error: error.message }, { status: 500 });
     }
 
