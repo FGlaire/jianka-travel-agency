@@ -65,6 +65,39 @@
   // Expected column order for validation
   const expectedColumns = travelFields.map(field => field.key);
 
+  // Function to map CSV headers to expected field keys
+  function mapHeaderToFieldKey(header: string): string {
+    const headerMap: { [key: string]: string } = {
+      'ID': 'id',
+      'Last Name': 'lastName',
+      'First Name': 'firstName',
+      'Email': 'email',
+      'Phone': 'phone',
+      'Date of Birth': 'dateOfBirth',
+      'Passport Number': 'passportNumber',
+      'Nationality': 'nationality',
+      'Address': 'address',
+      'City': 'city',
+      'Country': 'country',
+      'Postal Code': 'postalCode',
+      'Emergency Contact': 'emergencyContact',
+      'Emergency Phone': 'emergencyPhone',
+      'Dietary Requirements': 'dietaryRequirements',
+      'Medical Conditions': 'medicalConditions',
+      'Travel Insurance': 'travelInsurance',
+      'Preferred Language': 'preferredLanguage',
+      'Special Requests': 'specialRequests',
+      'Travel Experience': 'travelExperience',
+      'Budget': 'budget',
+      'Travel Dates': 'travelDates',
+      'Destination': 'destination',
+      'Accommodation Type': 'accommodationType',
+      'Transportation': 'transportation'
+    };
+    
+    return headerMap[header] || header.toLowerCase().replace(/\s+/g, '');
+  }
+
   onMount(() => {
     // Initialize with some sample data for demonstration
     loadSampleData();
@@ -125,7 +158,8 @@
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
         const row: any = {};
         headers.forEach((header, colIndex) => {
-          row[header] = values[colIndex] || '';
+          const mappedKey = mapHeaderToFieldKey(header);
+          row[mappedKey] = values[colIndex] || '';
         });
         row._originalRowIndex = index + 2; // +2 because we skip header and 0-indexed
         return row;
@@ -485,7 +519,7 @@
     <div class="files-table-section" transition:fly={{ y: 30, duration: 600, delay: 600, easing: quintOut }}>
       <div class="table-card">
         <h2>Uploaded Files</h2>
-        <div class="table-container">
+        <div class="table-container" title="Click and drag to scroll horizontally">
           <table class="files-table">
             <thead>
               <tr>
@@ -591,7 +625,7 @@
           </button>
         </div>
 
-        <div class="table-container">
+        <div class="table-container" title="Click and drag to scroll horizontally">
           <table class="results-table">
             <thead>
               <tr>
@@ -891,6 +925,12 @@
     border-radius: 8px;
     border: 1px solid #333333;
     max-width: 100%;
+    cursor: grab;
+    user-select: none;
+  }
+
+  .table-container:active {
+    cursor: grabbing;
   }
 
   .files-table,
