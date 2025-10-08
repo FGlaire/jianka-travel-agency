@@ -27,8 +27,20 @@
   
   function startTransition() {
     isTransitioning = true;
+    // Hide all content immediately
+    const main = document.querySelector('main');
+    if (main) {
+      main.style.opacity = '0';
+      main.style.transform = 'translateY(20px)';
+    }
+    
     setTimeout(() => {
       isTransitioning = false;
+      // Show content after transition
+      if (main) {
+        main.style.opacity = '1';
+        main.style.transform = 'translateY(0)';
+      }
     }, 1000); // Slightly longer to allow content to fade in
   }
 </script>
@@ -88,19 +100,11 @@
   
   /* Enhanced page content transitions */
   :global(main) {
-    opacity: 0;
-    transition: opacity 0.6s ease-out;
-    transition-delay: 0.4s; /* Delay content appearance until transition is halfway */
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
   }
   
-  :global(.page-transition.active ~ main) {
-    opacity: 0;
-    transition-delay: 0s; /* No delay when transitioning */
-  }
-  
-  :global(.page-transition:not(.active) ~ main) {
-    opacity: 1;
-    transition-delay: 0.4s; /* Delay when not transitioning */
+  :global(.page-transition.active) {
+    z-index: 9999;
   }
   
   /* Smooth navigation transitions */

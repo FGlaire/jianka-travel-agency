@@ -32,13 +32,13 @@
 
 <div class="app">
   <LoadingScreen />
-  <PageTransition />
   <Nav user={data.user} />
 
 	<main>
 		{@render children()}
 	</main>
-
+  
+  <PageTransition />
 </div>
 
 <style>
