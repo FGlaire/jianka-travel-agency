@@ -227,6 +227,16 @@
     margin: 1rem 0;
   }
 
+  /* Hide reCAPTCHA badge and terms */
+  .g-recaptcha iframe[src*="recaptcha"] {
+    filter: grayscale(100%);
+  }
+
+  /* Hide the reCAPTCHA logo/badge */
+  .grecaptcha-badge {
+    visibility: hidden !important;
+  }
+
   .form-actions {
     margin-top: 1rem;
   }

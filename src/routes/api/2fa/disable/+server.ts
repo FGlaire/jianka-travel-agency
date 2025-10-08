@@ -3,11 +3,15 @@ import type { RequestHandler } from '@sveltejs/kit';
 
 export const POST: RequestHandler = async ({ locals }) => {
   try {
-    const { user } = await locals.supabase.auth.getUser();
+    // Get the session from cookies
+    const { data: { session }, error: sessionError } = await locals.supabase.auth.getSession();
     
-    if (!user) {
+    if (sessionError || !session?.user) {
+      console.error('Session error:', sessionError);
       return json({ error: 'Not authenticated' }, { status: 401 });
     }
+
+    const user = session.user;
 
     // Update user metadata to disable 2FA
     const { error } = await locals.supabase.auth.updateUser({

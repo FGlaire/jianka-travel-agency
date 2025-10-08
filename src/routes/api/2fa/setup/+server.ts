@@ -5,11 +5,15 @@ import QRCode from 'qrcode';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
-    const { user } = await locals.supabase.auth.getUser();
+    // Get the session from cookies
+    const { data: { session }, error: sessionError } = await locals.supabase.auth.getSession();
     
-    if (!user) {
+    if (sessionError || !session?.user) {
+      console.error('Session error:', sessionError);
       return json({ error: 'Not authenticated' }, { status: 401 });
     }
+
+    const user = session.user;
 
     // Generate a new secret
     const secret = speakeasy.generateSecret({
