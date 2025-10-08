@@ -53,24 +53,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     console.log('Verification result:', verified);
 
     if (verified) {
-      // Update user metadata directly using admin API
-      const { error } = await locals.supabase.auth.admin.updateUserById(user.id, {
-        user_metadata: {
-          ...user.user_metadata,
-          two_factor_enabled: true, 
-          two_factor_secret: secret 
-        }
-      });
-
-      if (error) {
-        console.error('Error updating user metadata:', error);
-        return json({ error: error.message }, { status: 500 });
-      }
-
-      console.log('2FA enabled successfully for user:', user.email);
+      console.log('2FA verification successful for user:', user.email);
       return json({ 
         success: true,
-        message: '2FA enabled successfully! Please save your backup codes securely.'
+        message: '2FA verification successful! Please save your backup codes securely.',
+        secret: secret // Return the secret so client can save it
       });
     } else {
       console.log('Invalid verification code provided');

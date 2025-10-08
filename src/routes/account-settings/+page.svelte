@@ -202,11 +202,24 @@
       console.log('Verification response:', data);
 
       if (response.ok) {
-        successMessage = '2FA enabled successfully!';
-        is2FAEnabled = true;
-        twoFactorSecret = '';
-        twoFactorQrCode = '';
-        twoFactorCode = '';
+        // Update user metadata on the client side
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: {
+            two_factor_enabled: true,
+            two_factor_secret: data.secret
+          }
+        });
+
+        if (updateError) {
+          console.error('Error updating user metadata:', updateError);
+          errorMessage = '2FA verification successful, but failed to save settings. Please try again.';
+        } else {
+          successMessage = '2FA enabled successfully!';
+          is2FAEnabled = true;
+          twoFactorSecret = '';
+          twoFactorQrCode = '';
+          twoFactorCode = '';
+        }
       } else {
         errorMessage = data.error || 'Invalid verification code. Please try again.';
       }
@@ -223,32 +236,23 @@
     successMessage = '';
 
     try {
-      // First, refresh the session to ensure we have valid auth
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        errorMessage = 'Please log in again to disable 2FA';
-        return;
-      }
-
-      const response = await fetch('/api/2fa/disable', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        credentials: 'include'
+      // Update user metadata on the client side to disable 2FA
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          two_factor_enabled: false,
+          two_factor_secret: null
+        }
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
+      if (updateError) {
+        console.error('Error updating user metadata:', updateError);
+        errorMessage = 'Failed to disable 2FA. Please try again.';
+      } else {
         successMessage = '2FA disabled successfully!';
         is2FAEnabled = false;
-      } else {
-        errorMessage = data.error || 'Failed to disable 2FA. Please try again.';
       }
     } catch (err) {
+      console.error('Disable 2FA error:', err);
       errorMessage = 'Failed to disable 2FA. Please try again.';
     }
   }
