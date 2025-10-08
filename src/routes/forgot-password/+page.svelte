@@ -48,14 +48,17 @@
         return;
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/`
+        }
       });
 
       if (error) {
         errorMessage = error.message;
       } else {
-        successMessage = 'Password reset email sent! Please check your inbox and follow the instructions to reset your password.';
+        successMessage = 'Magic link sent! Please check your inbox and click the link to instantly log in.';
         email = '';
         captchaToken = '';
       }
@@ -81,14 +84,14 @@
 </script>
 
 <svelte:head>
-  <title>Forgot Password - JIANKA Travel Agency</title>
+  <title>Magic Link Login - JIANKA Travel Agency</title>
 </svelte:head>
 
 <div class="auth-container">
   <div class="auth-card">
     <div class="auth-header">
-      <h1>Forgot Password?</h1>
-      <p>Enter your email address and we'll send you a link to reset your password</p>
+      <h1>Magic Link Login</h1>
+      <p>Enter your email address and we'll send you a magic link to instantly log in</p>
     </div>
 
     <form on:submit={handleResetPassword} class="auth-form">
@@ -127,9 +130,9 @@
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
               <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/>
             </svg>
-            Sending Reset Link...
+            Sending Magic Link...
           {:else}
-            Send Reset Link
+            Send Magic Link
           {/if}
         </button>
       </div>

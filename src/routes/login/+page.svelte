@@ -268,7 +268,7 @@
       {/if}
 
       <div class="auth-links">
-        <a href="/forgot-password" class="forgot-password">Forgot your password?</a>
+        <a href="/forgot-password" class="forgot-password">Magic Link Login</a>
         <p>Don't have an account? <a href="/signup" class="signup-link">Sign up</a></p>
       </div>
     </form>
