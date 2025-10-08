@@ -10,11 +10,11 @@
   
   // Wait for initial loading screen to complete before enabling transitions
   onMount(() => {
-    // Wait for loading screen to complete (2.8 seconds total)
+    // Wait for loading screen to complete (2.8 seconds total) + small buffer
     setTimeout(() => {
       initialLoadComplete = true;
       currentPage = $page.route.id;
-    }, 2800);
+    }, 3000); // 3 seconds total
   });
   
   $: if (initialLoadComplete && $page.route.id !== currentPage) {
@@ -29,7 +29,7 @@
     isTransitioning = true;
     setTimeout(() => {
       isTransitioning = false;
-    }, 800);
+    }, 1000); // Slightly longer to allow content to fade in
   }
 </script>
 
@@ -59,8 +59,8 @@
     width: 100%;
     height: 100%;
     background: #000000;
-    opacity: 0;
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(100%);
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
   }
   
@@ -83,21 +83,24 @@
   }
   
   .page-transition.active .transition-overlay {
-    opacity: 1;
+    transform: translateY(0);
   }
   
   /* Enhanced page content transitions */
   :global(main) {
     opacity: 0;
     transition: opacity 0.6s ease-out;
+    transition-delay: 0.4s; /* Delay content appearance until transition is halfway */
   }
   
   :global(.page-transition.active ~ main) {
     opacity: 0;
+    transition-delay: 0s; /* No delay when transitioning */
   }
   
   :global(.page-transition:not(.active) ~ main) {
     opacity: 1;
+    transition-delay: 0.4s; /* Delay when not transitioning */
   }
   
   /* Smooth navigation transitions */
