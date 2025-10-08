@@ -101,6 +101,48 @@
   onMount(() => {
     // Initialize with some sample data for demonstration
     loadSampleData();
+    
+    // Add drag scrolling functionality to table containers
+    setTimeout(() => {
+      const tableContainers = document.querySelectorAll('.table-container');
+      tableContainers.forEach(container => {
+        let isDown = false;
+        let startX: number;
+        let scrollLeft: number;
+
+        const handleMouseDown = (e: Event) => {
+          const mouseEvent = e as MouseEvent;
+          isDown = true;
+          container.classList.add('active');
+          startX = mouseEvent.pageX - container.getBoundingClientRect().left;
+          scrollLeft = container.scrollLeft;
+        };
+
+        const handleMouseLeave = () => {
+          isDown = false;
+          container.classList.remove('active');
+        };
+
+        const handleMouseUp = () => {
+          isDown = false;
+          container.classList.remove('active');
+        };
+
+        const handleMouseMove = (e: Event) => {
+          if (!isDown) return;
+          const mouseEvent = e as MouseEvent;
+          mouseEvent.preventDefault();
+          const x = mouseEvent.pageX - container.getBoundingClientRect().left;
+          const walk = (x - startX) * 2; // Scroll speed multiplier
+          container.scrollLeft = scrollLeft - walk;
+        };
+
+        container.addEventListener('mousedown', handleMouseDown);
+        container.addEventListener('mouseleave', handleMouseLeave);
+        container.addEventListener('mouseup', handleMouseUp);
+        container.addEventListener('mousemove', handleMouseMove);
+      });
+    }, 100);
   });
 
   function loadSampleData() {
@@ -267,6 +309,7 @@
             errors: errors,
             isValid: errors.length === 0
           });
+          console.log(`Row ${index + 1} detailed errors:`, errors);
         }
         
         return validatedRow;
