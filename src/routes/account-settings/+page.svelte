@@ -566,16 +566,26 @@
   .settings-container {
     min-height: 100vh;
     padding: 2rem;
-    background: linear-gradient(135deg, #f5f0e6 0%, #e8dcc0 100%);
+    background: #000000;
+    color: #ffffff;
   }
 
   .settings-header {
     text-align: center;
     margin-bottom: 3rem;
+    color: #ffffff;
+  }
+  
+  .settings-header h1 {
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+  }
+  
+  .settings-header p {
+    color: #9a9a9a;
   }
 
   .settings-header h1 {
-    color: #2c2c2c;
     font-size: 2.5rem;
     font-weight: 700;
     margin: 0 0 0.5rem 0;
@@ -583,7 +593,6 @@
   }
 
   .settings-header p {
-    color: #666;
     font-size: 1.1rem;
     margin: 0;
   }
@@ -597,15 +606,16 @@
   }
 
   .settings-card {
-    background: white;
+    background: #1a1a1a;
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     padding: 2rem;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #333333;
+    color: #ffffff;
   }
 
   .settings-card h2 {
-    color: #2c2c2c;
+    color: #ffffff;
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0 0 1.5rem 0;
