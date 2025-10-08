@@ -180,6 +180,11 @@
         return;
       }
 
+      console.log('Sending verification request with:', {
+        secret: twoFactorSecret,
+        code: twoFactorCode
+      });
+
       const response = await fetch('/api/2fa/verify', {
         method: 'POST',
         headers: {
@@ -194,6 +199,7 @@
       });
 
       const data = await response.json();
+      console.log('Verification response:', data);
 
       if (response.ok) {
         successMessage = '2FA enabled successfully!';
@@ -205,6 +211,7 @@
         errorMessage = data.error || 'Invalid verification code. Please try again.';
       }
     } catch (err) {
+      console.error('Verification error:', err);
       errorMessage = 'Failed to verify 2FA setup. Please try again.';
     } finally {
       isVerifying2FA = false;
@@ -836,6 +843,7 @@
     font-size: 0.9rem;
     word-break: break-all;
     user-select: all;
+    color: black;
   }
 
   .copy-button {
