@@ -23,6 +23,15 @@ body {
 	overflow-x: hidden; /* prevent horizontal scroll */
 }
 
+/* Fix double scrollbar issue */
+html {
+	overflow-y: auto;
+}
+
+body {
+	overflow-y: auto;
+}
+
 h1,
 h2,
 p {

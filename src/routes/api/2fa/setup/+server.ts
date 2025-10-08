@@ -3,17 +3,29 @@ import type { RequestHandler } from '@sveltejs/kit';
 import * as speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 
-export const POST: RequestHandler = async ({ request, locals }) => {
+export const POST: RequestHandler = async ({ request, locals, cookies }) => {
   try {
-    // Get the session from cookies
-    const { data: { session }, error: sessionError } = await locals.supabase.auth.getSession();
+    // Try multiple methods to get the user
+    let user = null;
     
-    if (sessionError || !session?.user) {
-      console.error('Session error:', sessionError);
+    // Method 1: Try getSession
+    const { data: { session }, error: sessionError } = await locals.supabase.auth.getSession();
+    if (session?.user) {
+      user = session.user;
+    }
+    
+    // Method 2: Try getUser if session failed
+    if (!user) {
+      const { data: { user: authUser }, error: userError } = await locals.supabase.auth.getUser();
+      if (authUser) {
+        user = authUser;
+      }
+    }
+    
+    if (!user) {
+      console.error('No user found. Session error:', sessionError);
       return json({ error: 'Not authenticated' }, { status: 401 });
     }
-
-    const user = session.user;
 
     // Generate a new secret
     const secret = speakeasy.generateSecret({

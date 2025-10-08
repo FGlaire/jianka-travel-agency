@@ -267,6 +267,12 @@
     position: relative;
   }
 
+  .password-input input[type="password"] {
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+  }
+
   .password-toggle {
     position: absolute;
     right: 0.75rem;
