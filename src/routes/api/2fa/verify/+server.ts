@@ -54,6 +54,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     if (verified) {
       // Create a new session with the JWT token to enable user metadata updates
+      if (!authHeader) {
+        console.error('No auth header available for session creation');
+        return json({ error: 'Authentication required' }, { status: 401 });
+      }
+      
       const token = authHeader.replace('Bearer ', '');
       
       // Set the session using the JWT token

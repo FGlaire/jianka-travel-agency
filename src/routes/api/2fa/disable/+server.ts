@@ -29,16 +29,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Create a new session with the JWT token to enable user metadata updates
+    if (!authHeader) {
+      console.error('No auth header available for session creation');
+      return json({ error: 'Authentication required' }, { status: 401 });
+    }
+    
     const token = authHeader.replace('Bearer ', '');
     
     // Set the session using the JWT token
-    const { data: sessionData, error: sessionError } = await locals.supabase.auth.setSession({
+    const { data: sessionData, error: setSessionError } = await locals.supabase.auth.setSession({
       access_token: token,
       refresh_token: '' // We don't have refresh token from JWT
     });
     
-    if (sessionError) {
-      console.error('Error setting session:', sessionError);
+    if (setSessionError) {
+      console.error('Error setting session:', setSessionError);
       // Fallback: return success without persisting
       return json({ 
         success: true,
