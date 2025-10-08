@@ -57,6 +57,9 @@
     { key: 'transportation', name: 'Transportation', required: false, type: 'string' }
   ];
 
+  // Expected column order for validation
+  const expectedColumns = travelFields.map(field => field.key);
+
   onMount(() => {
     // Initialize with some sample data for demonstration
     loadSampleData();
@@ -106,14 +109,19 @@
     try {
       // Parse CSV file
       const text = await file.text();
-      const lines = text.split('\n');
+      const lines = text.split('\n').filter(line => line.trim() !== '');
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-      const data = lines.slice(1).map(line => {
+      
+      // Validate column order and structure
+      const columnValidation = validateColumns(headers);
+      
+      const data = lines.slice(1).map((line, index) => {
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
         const row: any = {};
-        headers.forEach((header, index) => {
-          row[header] = values[index] || '';
+        headers.forEach((header, colIndex) => {
+          row[header] = values[colIndex] || '';
         });
+        row._originalRowIndex = index + 2; // +2 because we skip header and 0-indexed
         return row;
       });
 
@@ -124,7 +132,8 @@
         size: file.size,
         uploadDate: new Date(),
         data: data,
-        columns: headers
+        columns: headers,
+        columnValidation: columnValidation
       };
 
       uploadedFiles = [...uploadedFiles, fileObj];
@@ -163,10 +172,19 @@
     }, 150);
 
     try {
+      // First, detect duplicates based on ID, email, and passport number
+      const duplicateFields = ['id', 'email', 'passportNumber'];
+      const { duplicates, uniqueData } = detectDuplicates(selectedFile.data, duplicateFields);
+      
       // Process and validate data
-      const processedData = selectedFile.data.map((row: any, index: number) => {
+      const processedData = uniqueData.map((row: any, index: number) => {
         const validatedRow = { ...row, _rowIndex: index + 1 };
         const errors: string[] = [];
+
+        // Add column validation errors if any
+        if (selectedFile.columnValidation && !selectedFile.columnValidation.isValid) {
+          errors.push(...selectedFile.columnValidation.errors);
+        }
 
         // Validate each field
         travelFields.forEach(field => {
@@ -195,9 +213,18 @@
         return validatedRow;
       });
 
-      extractedData = processedData;
+      // Add duplicates to failed data
+      const duplicateData = duplicates.map(dup => ({
+        ...dup,
+        _rowIndex: dup._duplicateIndex + 1,
+        _errors: [`Duplicate entry - matches row ${dup._duplicateOf + 1}`],
+        _isValid: false,
+        _isDuplicate: true
+      }));
+
+      extractedData = [...processedData, ...duplicateData];
       successData = processedData.filter(row => row._isValid);
-      failedData = processedData.filter(row => !row._isValid);
+      failedData = [...processedData.filter(row => !row._isValid), ...duplicateData];
 
       setTimeout(() => {
         isExtracting = false;
@@ -220,6 +247,77 @@
   function isValidDate(dateString: string): boolean {
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date.getTime());
+  }
+
+  function validateColumns(headers: string[]): { isValid: boolean; errors: string[]; warnings: string[] } {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    
+    // Check for missing required columns
+    const requiredColumns = travelFields.filter(field => field.required).map(field => field.key);
+    const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+    
+    if (missingColumns.length > 0) {
+      errors.push(`Missing required columns: ${missingColumns.join(', ')}`);
+    }
+    
+    // Check for unexpected columns
+    const unexpectedColumns = headers.filter(header => !expectedColumns.includes(header));
+    if (unexpectedColumns.length > 0) {
+      warnings.push(`Unexpected columns found: ${unexpectedColumns.join(', ')}`);
+    }
+    
+    // Check column order (warn if different)
+    const isOrderCorrect = JSON.stringify(headers) === JSON.stringify(expectedColumns);
+    if (!isOrderCorrect) {
+      warnings.push('Column order differs from expected format');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
+  }
+
+  function detectDuplicates(data: any[], keyFields: string[]): { duplicates: any[]; uniqueData: any[] } {
+    const seen = new Map<string, number[]>();
+    const duplicates: any[] = [];
+    const uniqueData: any[] = [];
+    
+    data.forEach((row, index) => {
+      // Create a composite key from specified fields
+      const compositeKey = keyFields.map(field => (row[field] || '').toString().toLowerCase()).join('|');
+      
+      if (seen.has(compositeKey)) {
+        // This is a duplicate
+        const originalIndex = seen.get(compositeKey)![0];
+        duplicates.push({
+          ...row,
+          _isDuplicate: true,
+          _duplicateOf: originalIndex,
+          _duplicateIndex: index
+        });
+        
+        // Also mark the original as having duplicates
+        const originalRow = uniqueData.find(r => r._originalIndex === originalIndex);
+        if (originalRow) {
+          originalRow._hasDuplicates = true;
+          originalRow._duplicateCount = (originalRow._duplicateCount || 0) + 1;
+        }
+      } else {
+        // This is unique
+        const uniqueRow = {
+          ...row,
+          _isDuplicate: false,
+          _originalIndex: index
+        };
+        uniqueData.push(uniqueRow);
+        seen.set(compositeKey, [index]);
+      }
+    });
+    
+    return { duplicates, uniqueData };
   }
 
   function formatFileSize(bytes: number): string {
@@ -350,7 +448,15 @@
                   <td>{file.data.length}</td>
                   <td>{file.columns.length}</td>
                   <td>
-                    <span class="status-badge ready">Ready</span>
+                    {#if file.columnValidation}
+                      {#if file.columnValidation.isValid}
+                        <span class="status-badge ready">Ready</span>
+                      {:else}
+                        <span class="status-badge error">Column Error</span>
+                      {/if}
+                    {:else}
+                      <span class="status-badge ready">Ready</span>
+                    {/if}
                   </td>
                 </tr>
               {/each}
@@ -434,8 +540,13 @@
             </thead>
             <tbody>
               {#each (activeTab === 'success' ? successData : failedData) as row (row._rowIndex)}
-                <tr>
-                  <td>{row._rowIndex}</td>
+                <tr class:duplicate={row._isDuplicate}>
+                  <td>
+                    {row._rowIndex}
+                    {#if row._isDuplicate}
+                      <span class="duplicate-badge">DUP</span>
+                    {/if}
+                  </td>
                   {#each travelFields.slice(0, 10) as field}
                     <td>{row[field.key] || '-'}</td>
                   {/each}
@@ -728,6 +839,11 @@
     color: #4ade80;
   }
 
+  .status-badge.error {
+    background: #4a1a1a;
+    color: #ff6b6b;
+  }
+
   .extract-section {
     text-align: center;
   }
@@ -856,6 +972,21 @@
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: 0.8rem;
+  }
+
+  .duplicate-badge {
+    background: #ff6b6b;
+    color: #ffffff;
+    padding: 0.1rem 0.4rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+  }
+
+  .duplicate {
+    background: #2a1a1a !important;
+    border-left: 3px solid #ff6b6b;
   }
 
   .reset-section {
