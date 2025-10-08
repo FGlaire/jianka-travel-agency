@@ -4,6 +4,9 @@
 	let words = ['All', 'roads', 'lead', 'to', 'rome'];
 
 	onMount(async () => {
+		// Wait for loading screen to complete (3 seconds + 300ms buffer)
+		await new Promise(resolve => setTimeout(resolve, 3300));
+		
 		// Dynamically import GSAP only on client to avoid SSR errors
 		const gsapMod = await import('gsap');
 		const stMod = await import('gsap/ScrollTrigger');
@@ -12,6 +15,12 @@
 
 		// Check if device is mobile
 		const isMobile = window.innerWidth <= 768;
+		
+		// Fade in the main content first
+		gsap.fromTo('.hero-content', 
+			{ opacity: 0 },
+			{ opacity: 1, duration: 0.8, ease: 'power2.out' }
+		);
 		
         // Fog reveal: words and arrow appear one-by-one, de-blur and fade in
         gsap.fromTo(
@@ -421,13 +430,15 @@
 </svelte:head>
 
 <section id="top" class="hero container" aria-label="Intro">
-	<h1 aria-live="polite">
-		{#each words as w, i}
-			<span class="fog-word">{w}{i < words.length - 1 ? ' ' : ''}</span>
-		{/each}
-	</h1>
-	<div class="quote-credit">— some french guy</div>
-    <div class="scroll-hint scroll-arrow" aria-hidden="true">↓ scroll down</div>
+	<div class="hero-content">
+		<h1 aria-live="polite">
+			{#each words as w, i}
+				<span class="fog-word">{w}{i < words.length - 1 ? ' ' : ''}</span>
+			{/each}
+		</h1>
+		<div class="quote-credit">— some french guy</div>
+		<div class="scroll-hint scroll-arrow" aria-hidden="true">↓ scroll down</div>
+	</div>
 </section>
 
 <section id="squishy" class="section container" aria-label="Brand" style="min-height: 90svh; padding-bottom: 8rem;">
@@ -582,4 +593,7 @@
 
 <style>
 	/* page-specific overrides if needed */
+	.hero-content {
+		opacity: 0; /* Initially hidden, will be animated in */
+	}
 </style>
