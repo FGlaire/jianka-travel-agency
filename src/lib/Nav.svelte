@@ -144,7 +144,7 @@
 
 <header class="header">
   <div class="header-content">
-    <a href="#top" class="logo" data-smooth-scroll>JIANKA</a>
+    <a href="/" class="logo" data-smooth-scroll>JIANKA</a>
     
     <div class="nav-right">
       <!-- Login/Account Button -->
@@ -200,21 +200,21 @@
       </button>
       <div class="menu-content {menuContentClosing ? 'closing' : ''}" onclick={(e) => e.stopPropagation()} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && e.stopPropagation()}>
         <nav>
-          <a href="#top" class="menu-link" onclick={handleMenuLinkClick}>
+          <a href="/" class="menu-link" onclick={handleMenuLinkClick}>
             <span class="menu-number">01</span>
-            <span class="menu-text">FILE EXTRACTION</span>
+            <span class="menu-text">HOME</span>
           </a>
-          <a href="#destinations" class="menu-link" onclick={handleMenuLinkClick}>
+          <a href="/about" class="menu-link" onclick={handleMenuLinkClick}>
             <span class="menu-number">02</span>
-            <span class="menu-text">FIELD MAPPING</span>
-          </a>
-          <a href="#about" class="menu-link" onclick={handleMenuLinkClick}>
-            <span class="menu-number">03</span>
             <span class="menu-text">ABOUT</span>
           </a>
-          <a href="#contact" class="menu-link" onclick={handleMenuLinkClick}>
+          <a href="/login" class="menu-link" onclick={handleMenuLinkClick}>
+            <span class="menu-number">03</span>
+            <span class="menu-text">LOGIN</span>
+          </a>
+          <a href="/account-settings" class="menu-link" onclick={handleMenuLinkClick}>
             <span class="menu-number">04</span>
-            <span class="menu-text">CONTACT</span>
+            <span class="menu-text">ACCOUNT</span>
           </a>
         </nav>
       </div>
