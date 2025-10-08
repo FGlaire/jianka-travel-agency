@@ -93,6 +93,8 @@
     successMessage = '';
 
     try {
+      console.log('Sending 2FA login verification request:', { email, code: twoFactorCode });
+      
       const response = await fetch('/api/2fa/login-verify', {
         method: 'POST',
         headers: {
@@ -104,7 +106,9 @@
         })
       });
 
+      console.log('2FA login verification response status:', response.status);
       const data = await response.json();
+      console.log('2FA login verification response data:', data);
 
       if (response.ok) {
         // Set the session on the client side
