@@ -100,7 +100,7 @@
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: `https://jianka-travel-agency-p19dy0y1y-fglaires-projects.vercel.app/auth/callback`
         }
       });
 
