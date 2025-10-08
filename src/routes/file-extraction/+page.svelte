@@ -119,6 +119,7 @@
       
       // Validate column order and structure
       const columnValidation = validateColumns(headers);
+      console.log('Column validation:', columnValidation);
       
       const data = lines.slice(1).map((line, index) => {
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
@@ -129,6 +130,10 @@
         row._originalRowIndex = index + 2; // +2 because we skip header and 0-indexed
         return row;
       });
+
+      console.log('CSV Headers:', headers);
+      console.log('Expected field keys:', travelFields.map(f => f.key));
+      console.log('Sample parsed row:', data[0]);
 
       // Create file object
       const fileObj = {
@@ -219,6 +224,16 @@
 
         validatedRow._errors = errors;
         validatedRow._isValid = errors.length === 0;
+        
+        // Log first few validation results for debugging
+        if (index < 3) {
+          console.log(`Row ${index + 1} validation:`, {
+            id: row.id,
+            email: row.email,
+            errors: errors,
+            isValid: errors.length === 0
+          });
+        }
         
         return validatedRow;
       });
