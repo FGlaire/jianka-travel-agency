@@ -102,9 +102,27 @@
   }
 
   function handleMenuLinkClick(event: MouseEvent) {
+    const target = event.currentTarget as HTMLAnchorElement;
+    const href = target.getAttribute('href');
+    
     // Close the menu with animation
     closeMenu();
-    // Let the default link behavior happen (navigation)
+    
+    // Handle smooth scrolling to About section
+    if (href === '/#about') {
+      event.preventDefault();
+      setTimeout(() => {
+        const aboutSection = document.getElementById('about');
+        if (aboutSection) {
+          aboutSection.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      }, 100); // Small delay to ensure menu closes first
+    } else {
+      // Let the default link behavior happen for other links
+    }
   }
 
   function handleOverlayClick(event: MouseEvent | KeyboardEvent) {
@@ -204,7 +222,7 @@
             <span class="menu-number">01</span>
             <span class="menu-text">HOME</span>
           </a>
-          <a href="/about" class="menu-link" onclick={handleMenuLinkClick}>
+          <a href="/#about" class="menu-link" onclick={handleMenuLinkClick}>
             <span class="menu-number">02</span>
             <span class="menu-text">ABOUT</span>
           </a>
