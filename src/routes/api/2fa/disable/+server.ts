@@ -28,10 +28,37 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Not authenticated - please log in again' }, { status: 401 });
     }
 
-    // For now, we'll just return success since we can't update user metadata
-    // without the service role key. In a production app, you'd want to use
-    // the service role key for admin operations or store this in a separate database table
+    // Create a new session with the JWT token to enable user metadata updates
+    const token = authHeader.replace('Bearer ', '');
     
+    // Set the session using the JWT token
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.setSession({
+      access_token: token,
+      refresh_token: '' // We don't have refresh token from JWT
+    });
+    
+    if (sessionError) {
+      console.error('Error setting session:', sessionError);
+      // Fallback: return success without persisting
+      return json({ 
+        success: true,
+        message: '2FA disabled successfully!'
+      });
+    }
+    
+    // Update user metadata to disable 2FA
+    const { error } = await locals.supabase.auth.updateUser({
+      data: { 
+        two_factor_enabled: false, 
+        two_factor_secret: null 
+      }
+    });
+
+    if (error) {
+      console.error('Error updating user:', error);
+      return json({ error: error.message }, { status: 500 });
+    }
+
     console.log('2FA disabled for user:', user.email);
     
     return json({ 

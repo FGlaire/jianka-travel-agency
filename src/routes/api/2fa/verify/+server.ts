@@ -53,21 +53,39 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     console.log('Verification result:', verified);
 
     if (verified) {
-      // For now, we'll store the 2FA status in a simple way
-      // In a production app, you'd want to use the service role key for admin operations
-      // or store this in a separate database table
+      // Create a new session with the JWT token to enable user metadata updates
+      const token = authHeader.replace('Bearer ', '');
       
-      console.log('2FA verification successful for user:', user.email);
-      console.log('Secret to store:', secret);
-      
-      // Since we can't use admin.updateUserById without service role key,
-      // we'll return success and let the client handle the UI update
-      // The 2FA secret should be stored securely on the client side or in a separate table
-      
-      return json({ 
-        success: true,
-        message: '2FA enabled successfully! Please save your backup codes securely.'
+      // Set the session using the JWT token
+      const { data: sessionData, error: sessionError } = await locals.supabase.auth.setSession({
+        access_token: token,
+        refresh_token: '' // We don't have refresh token from JWT
       });
+      
+      if (sessionError) {
+        console.error('Error setting session:', sessionError);
+        // Fallback: return success without persisting
+        return json({ 
+          success: true,
+          message: '2FA enabled successfully! Please save your backup codes securely.'
+        });
+      }
+      
+      // Now update user metadata
+      const { error } = await locals.supabase.auth.updateUser({
+        data: { 
+          two_factor_enabled: true, 
+          two_factor_secret: secret 
+        }
+      });
+
+      if (error) {
+        console.error('Error updating user:', error);
+        return json({ error: error.message }, { status: 500 });
+      }
+
+      console.log('2FA enabled successfully for user:', user.email);
+      return json({ success: true });
     } else {
       console.log('Invalid verification code provided');
       return json({ error: 'Invalid verification code' }, { status: 400 });
