@@ -255,7 +255,7 @@
       </div>
 
       <div class="form-group">
-        <div class="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI" data-callback="onCaptchaSuccess" data-expired-callback="onCaptchaExpired" data-error-callback="onCaptchaError"></div>
+        <div class="g-recaptcha" data-sitekey={import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'} data-callback="onCaptchaSuccess" data-expired-callback="onCaptchaExpired" data-error-callback="onCaptchaError"></div>
       </div>
 
       <div class="form-actions">
@@ -440,7 +440,9 @@
   }
 
   .g-recaptcha {
-    display: none;
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
   }
 
   .form-actions {
