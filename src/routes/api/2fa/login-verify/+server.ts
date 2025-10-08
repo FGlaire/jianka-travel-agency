@@ -12,19 +12,31 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Email and code are required' }, { status: 400 });
     }
 
-    // Try to get user by email using admin API
+    // For now, let's implement a simple solution using environment variables
+    // This is a temporary fix until we can properly configure the admin API
+    
+    // Check if we have a service role key configured
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!serviceRoleKey) {
+      console.error('Service role key not configured');
+      return json({ 
+        error: '2FA verification service not properly configured',
+        details: 'Please contact support'
+      }, { status: 503 });
+    }
+
+    // Try to get user by email using admin API with service role
     const { data: { users }, error: userError } = await locals.supabase.auth.admin.listUsers();
     
     if (userError) {
       console.error('Error fetching users:', userError);
       console.error('UserError details:', userError.message, userError.status);
       
-      // If admin API fails, try alternative approach
-      // We'll need to implement a database table for 2FA secrets
       return json({ 
-        error: '2FA verification temporarily unavailable. Admin API not accessible.',
-        details: 'Please contact support or try again later'
-      }, { status: 503 });
+        error: 'Failed to verify user credentials',
+        details: 'Please try again or contact support'
+      }, { status: 500 });
     }
 
     console.log('Found users:', users.length);
