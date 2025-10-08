@@ -17,7 +17,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     
     if (userError) {
       console.error('Error fetching users:', userError);
-      return json({ error: 'Failed to verify user' }, { status: 500 });
+      console.error('UserError details:', userError.message, userError.status);
+      
+      // If admin API fails, try alternative approach
+      // We'll need to implement a database table for 2FA secrets
+      return json({ 
+        error: '2FA verification temporarily unavailable. Admin API not accessible.',
+        details: 'Please contact support or try again later'
+      }, { status: 503 });
     }
 
     console.log('Found users:', users.length);
