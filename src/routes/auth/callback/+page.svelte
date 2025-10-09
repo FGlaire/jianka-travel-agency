@@ -4,12 +4,18 @@
   import { supabase } from '$lib/supabaseClient';
 
   onMount(async () => {
+    console.log('Auth callback page loaded');
+    
+    // Small delay to ensure server-side processing is complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Check if we have a valid session after the server-side exchange
     const { data: { session }, error } = await supabase.auth.getSession();
     
     console.log('Client-side auth check:', {
       hasSession: !!session,
       hasUser: !!session?.user,
+      userEmail: session?.user?.email,
       error: error?.message
     });
 
@@ -18,8 +24,18 @@
       // Force a page reload to update the authentication state
       window.location.href = '/';
     } else {
-      console.log('No valid session found, redirecting to login');
-      goto('/login');
+      console.log('No valid session found, trying to refresh...');
+      
+      // Try to refresh the session in case it's still being processed
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshedSession?.user) {
+        console.log('Session refreshed successfully:', refreshedSession.user.email);
+        window.location.href = '/';
+      } else {
+        console.log('Still no valid session, redirecting to login');
+        goto('/login');
+      }
     }
   });
 </script>
