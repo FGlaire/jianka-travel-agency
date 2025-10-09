@@ -33,6 +33,43 @@
   let uploadProgress = 0;
   let showUploadArea = true;
 
+  // Drag scrolling state
+  let dragState = {
+    isDown: false,
+    startX: 0,
+    scrollLeft: 0,
+    container: null as HTMLElement | null
+  };
+
+  function handleMouseDown(e: MouseEvent, container: HTMLElement) {
+    dragState.isDown = true;
+    dragState.container = container;
+    dragState.startX = e.pageX - container.getBoundingClientRect().left;
+    dragState.scrollLeft = container.scrollLeft;
+    container.classList.add('active');
+    console.log('Mouse down on container');
+  }
+
+  function handleMouseUp(container: HTMLElement) {
+    dragState.isDown = false;
+    dragState.container = null;
+    container.classList.remove('active');
+  }
+
+  function handleMouseLeave(container: HTMLElement) {
+    dragState.isDown = false;
+    dragState.container = null;
+    container.classList.remove('active');
+  }
+
+  function handleMouseMove(e: MouseEvent) {
+    if (!dragState.isDown || !dragState.container) return;
+    e.preventDefault();
+    const x = e.pageX - dragState.container.getBoundingClientRect().left;
+    const walk = (x - dragState.startX) * 2;
+    dragState.container.scrollLeft = dragState.scrollLeft - walk;
+  }
+
   // Travel field definitions for validation
   const travelFields = [
     { key: 'id', name: 'ID', required: true, type: 'id' },
@@ -102,63 +139,25 @@
     // Initialize with some sample data for demonstration
     loadSampleData();
     
-    // Add drag scrolling functionality to table containers
-    const addDragScrolling = () => {
-      const tableContainers = document.querySelectorAll('.table-container');
-      console.log('Found table containers:', tableContainers.length);
-      
-      tableContainers.forEach((container, index) => {
-        // Skip if already initialized
-        if (container.hasAttribute('data-drag-initialized')) {
-          return;
-        }
-        
-        let isDown = false;
-        let startX: number;
-        let scrollLeft: number;
-
-        const handleMouseDown = (e: Event) => {
-          const mouseEvent = e as MouseEvent;
-          isDown = true;
-          container.classList.add('active');
-          startX = mouseEvent.pageX - container.getBoundingClientRect().left;
-          scrollLeft = container.scrollLeft;
-          console.log('Mouse down on container', index);
-        };
-
-        const handleMouseLeave = () => {
-          isDown = false;
-          container.classList.remove('active');
-        };
-
-        const handleMouseUp = () => {
-          isDown = false;
-          container.classList.remove('active');
-        };
-
-        const handleMouseMove = (e: Event) => {
-          if (!isDown) return;
-          const mouseEvent = e as MouseEvent;
-          mouseEvent.preventDefault();
-          const x = mouseEvent.pageX - container.getBoundingClientRect().left;
-          const walk = (x - startX) * 2;
-          container.scrollLeft = scrollLeft - walk;
-        };
-
-        container.addEventListener('mousedown', handleMouseDown);
-        container.addEventListener('mouseleave', handleMouseLeave);
-        container.addEventListener('mouseup', handleMouseUp);
-        container.addEventListener('mousemove', handleMouseMove);
-        container.setAttribute('data-drag-initialized', 'true');
-        
-        console.log('Drag scrolling initialized for container', index);
-      });
+    // Add global mouse move listener for drag scrolling
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      handleMouseMove(e);
     };
 
-    // Add drag scrolling immediately and also after delays
-    addDragScrolling();
-    setTimeout(addDragScrolling, 500);
-    setTimeout(addDragScrolling, 1000);
+    const handleGlobalMouseUp = () => {
+      if (dragState.container) {
+        handleMouseUp(dragState.container);
+      }
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+
+    // Cleanup on component destroy
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
   });
 
   function loadSampleData() {
@@ -672,7 +671,14 @@
     <div class="files-table-section" transition:fly={{ y: 30, duration: 600, delay: 600, easing: quintOut }}>
       <div class="table-card">
         <h2>Uploaded Files</h2>
-        <div class="table-container" title="Click and drag to scroll horizontally">
+        <div 
+          class="table-container" 
+          title="Click and drag to scroll horizontally"
+          role="button"
+          tabindex="0"
+          on:mousedown={(e) => handleMouseDown(e, e.currentTarget)}
+          on:mouseleave={(e) => handleMouseLeave(e.currentTarget)}
+        >
           <table class="files-table">
             <thead>
               <tr>
@@ -778,7 +784,14 @@
           </button>
         </div>
 
-        <div class="table-container" title="Click and drag to scroll horizontally">
+        <div 
+          class="table-container" 
+          title="Click and drag to scroll horizontally"
+          role="button"
+          tabindex="0"
+          on:mousedown={(e) => handleMouseDown(e, e.currentTarget)}
+          on:mouseleave={(e) => handleMouseLeave(e.currentTarget)}
+        >
           <table class="results-table">
             <thead>
               <tr>
