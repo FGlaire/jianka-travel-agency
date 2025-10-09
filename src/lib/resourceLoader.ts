@@ -40,7 +40,7 @@ export class ResourceLoader {
   }
 
   private trackImages() {
-    const images = document.querySelectorAll('img');
+    const images = document.querySelectorAll('img:not(#parallax-bg):not(#parallax-fg)');
     this.totalResources += images.length;
 
     images.forEach((img) => {

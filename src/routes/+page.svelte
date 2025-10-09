@@ -7,6 +7,17 @@
 		// Wait for loading screen to complete (3 seconds + 300ms buffer)
 		await new Promise(resolve => setTimeout(resolve, 3300));
 		
+		// Show parallax images immediately to prevent popping
+		const parallaxBg = document.getElementById('parallax-bg');
+		const parallaxFg = document.getElementById('parallax-fg');
+		
+		if (parallaxBg) {
+			parallaxBg.style.opacity = '1';
+		}
+		if (parallaxFg) {
+			parallaxFg.style.opacity = '1';
+		}
+		
 		// Dynamically import GSAP only on client to avoid SSR errors
 		const gsapMod = await import('gsap');
 		const stMod = await import('gsap/ScrollTrigger');
@@ -16,21 +27,16 @@
 		// Check if device is mobile
 		const isMobile = window.innerWidth <= 768;
 		
-		// Small delay to ensure CSS is fully applied before GSAP takes over
-		setTimeout(() => {
-			// Set initial parallax state to prevent any popping
-			gsap.set('#parallax-bg', {
-				y: isMobile ? '2%' : '15%',
-				scale: isMobile ? 1.01 : 1.1,
-				opacity: 1 // Show the background
-			});
-			
-			gsap.set('#parallax-fg', {
-				y: isMobile ? '8%' : '25%',
-				scale: isMobile ? 1.03 : 1.05,
-				opacity: 1 // Show the foreground
-			});
-		}, 50);
+		// Set initial parallax state immediately to prevent any popping
+		gsap.set('#parallax-bg', {
+			y: isMobile ? '2%' : '15%',
+			scale: isMobile ? 1.01 : 1.1
+		});
+		
+		gsap.set('#parallax-fg', {
+			y: isMobile ? '8%' : '25%',
+			scale: isMobile ? 1.03 : 1.05
+		});
 		
 		// Fade in the main content first
 		gsap.fromTo('.hero-content', 
