@@ -462,6 +462,13 @@
         return validatedRow;
       });
 
+      // Debug: Check processedData before filtering
+      console.log('ProcessedData before filtering:');
+      console.log('Total processed:', processedData.length);
+      console.log('Valid records:', processedData.filter(r => r._isValid).length);
+      console.log('Invalid records:', processedData.filter(r => !r._isValid).length);
+      console.log('Sample processed record:', processedData[0]);
+
       // Add duplicates to failed data
       const duplicateData = duplicates.map(dup => ({
         ...dup,
