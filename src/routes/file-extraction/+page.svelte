@@ -103,7 +103,7 @@
     loadSampleData();
     
     // Add drag scrolling functionality to table containers
-    setTimeout(() => {
+    const addDragScrolling = () => {
       const tableContainers = document.querySelectorAll('.table-container');
       tableContainers.forEach(container => {
         let isDown = false;
@@ -142,7 +142,11 @@
         container.addEventListener('mouseup', handleMouseUp);
         container.addEventListener('mousemove', handleMouseMove);
       });
-    }, 100);
+    };
+
+    // Add drag scrolling immediately and also after a delay
+    addDragScrolling();
+    setTimeout(addDragScrolling, 500);
   });
 
   function loadSampleData() {
@@ -225,6 +229,51 @@
       uploadedFiles = [...uploadedFiles, fileObj];
       // Don't hide upload area - allow multiple file uploads
       // showUploadArea = false;
+
+      // Re-initialize drag scrolling for new tables
+      setTimeout(() => {
+        const tableContainers = document.querySelectorAll('.table-container');
+        tableContainers.forEach(container => {
+          if (!container.hasAttribute('data-drag-initialized')) {
+            let isDown = false;
+            let startX: number;
+            let scrollLeft: number;
+
+            const handleMouseDown = (e: Event) => {
+              const mouseEvent = e as MouseEvent;
+              isDown = true;
+              container.classList.add('active');
+              startX = mouseEvent.pageX - container.getBoundingClientRect().left;
+              scrollLeft = container.scrollLeft;
+            };
+
+            const handleMouseLeave = () => {
+              isDown = false;
+              container.classList.remove('active');
+            };
+
+            const handleMouseUp = () => {
+              isDown = false;
+              container.classList.remove('active');
+            };
+
+            const handleMouseMove = (e: Event) => {
+              if (!isDown) return;
+              const mouseEvent = e as MouseEvent;
+              mouseEvent.preventDefault();
+              const x = mouseEvent.pageX - container.getBoundingClientRect().left;
+              const walk = (x - startX) * 2;
+              container.scrollLeft = scrollLeft - walk;
+            };
+
+            container.addEventListener('mousedown', handleMouseDown);
+            container.addEventListener('mouseleave', handleMouseLeave);
+            container.addEventListener('mouseup', handleMouseUp);
+            container.addEventListener('mousemove', handleMouseMove);
+            container.setAttribute('data-drag-initialized', 'true');
+          }
+        });
+      }, 100);
 
       setTimeout(() => {
         isUploading = false;
@@ -355,22 +404,25 @@
     const errors: string[] = [];
     const warnings: string[] = [];
     
+    // Map CSV headers to expected field keys for validation
+    const mappedHeaders = headers.map(header => mapHeaderToFieldKey(header));
+    
     // Check for missing required columns
     const requiredColumns = travelFields.filter(field => field.required).map(field => field.key);
-    const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+    const missingColumns = requiredColumns.filter(col => !mappedHeaders.includes(col));
     
     if (missingColumns.length > 0) {
       errors.push(`Missing required columns: ${missingColumns.join(', ')}`);
     }
     
     // Check for unexpected columns
-    const unexpectedColumns = headers.filter(header => !expectedColumns.includes(header));
+    const unexpectedColumns = mappedHeaders.filter(header => !expectedColumns.includes(header));
     if (unexpectedColumns.length > 0) {
       warnings.push(`Unexpected columns found: ${unexpectedColumns.join(', ')}`);
     }
     
     // Check column order (warn if different)
-    const isOrderCorrect = JSON.stringify(headers) === JSON.stringify(expectedColumns);
+    const isOrderCorrect = JSON.stringify(mappedHeaders) === JSON.stringify(expectedColumns);
     if (!isOrderCorrect) {
       warnings.push('Column order differs from expected format');
     }
