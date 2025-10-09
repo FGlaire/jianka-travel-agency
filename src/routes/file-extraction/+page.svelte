@@ -572,11 +572,13 @@
   function isValidPhone(phone: string): boolean {
     if (!phone || phone.trim() === '') return true; // Phone is optional
     
-    const cleanPhone = phone.trim();
+    let cleanPhone = phone.trim();
     
-    // Handle negative numbers (like "-1522") - these are invalid
+    // Handle Excel-corrupted phone numbers (negative numbers)
+    // Convert negative numbers to positive and add country code
     if (cleanPhone.startsWith('-') && !cleanPhone.includes('+')) {
-      return false;
+      // Remove the negative sign and treat as a valid phone number
+      cleanPhone = '+' + cleanPhone.substring(1);
     }
     
     // Basic phone validation - allows various formats
