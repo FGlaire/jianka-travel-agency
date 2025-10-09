@@ -56,6 +56,8 @@
     box-sizing: border-box;
     padding-left: 0; /* no gutter by default */
     transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+    opacity: 1;
+    transform: translateY(0);
   }
   
   /* Smooth page transitions */

@@ -1300,6 +1300,13 @@
     text-overflow: ellipsis;
   }
 
+  .results-table td:last-child {
+    white-space: normal;
+    max-width: 350px;
+    overflow: visible;
+    text-overflow: unset;
+  }
+
   .files-table tr:hover,
   .results-table tr:hover {
     background: #1a1a1a;
@@ -1457,6 +1464,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    max-width: 300px;
+    min-width: 200px;
   }
 
   .error {
@@ -1465,6 +1474,10 @@
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: 0.8rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.3;
   }
 
   .duplicate-badge {
