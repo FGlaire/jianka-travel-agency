@@ -113,8 +113,8 @@
     width: 100%;
     height: 100%;
     background: #000000;
-    transform: translateY(100%);
-    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     display: flex;
     align-items: center;
@@ -140,7 +140,7 @@
   }
   
   .page-transition.active .transition-overlay {
-    transform: translateY(0);
+    opacity: 1;
   }
   
   .loading-spinner {

@@ -111,8 +111,8 @@ export class ResourceLoader {
     // Ensure minimum loading time
     const timeProgress = Math.min((elapsed / this.minLoadingTime) * 100, 100);
     
-    // Use the higher of resource progress or time progress
-    const finalProgress = Math.max(resourceProgress, timeProgress);
+    // Use the higher of resource progress or time progress, but cap at 100
+    const finalProgress = Math.min(Math.max(resourceProgress, timeProgress), 100);
     
     // Notify callbacks
     this.loadingCallbacks.forEach(callback => callback(finalProgress));

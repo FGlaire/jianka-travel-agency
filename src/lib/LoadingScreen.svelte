@@ -19,7 +19,7 @@
     
     // Listen to resource loading progress
     resourceLoader.onProgress((progress) => {
-      count = Math.round(progress);
+      count = Math.min(Math.round(progress), 100); // Cap at 100
       
       if (progress >= 100) {
         setTimeout(() => {

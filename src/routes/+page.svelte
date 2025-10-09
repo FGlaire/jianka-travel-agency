@@ -61,7 +61,8 @@
 				trigger: '#squishy',
 				start: 'top bottom',
 				end: 'top 20%',
-				scrub: isMobile ? 0.3 : 1 // Much less aggressive scrubbing on mobile
+				scrub: isMobile ? 0.3 : 1, // Much less aggressive scrubbing on mobile
+				immediateRender: false // Prevent immediate render to avoid popping
 			}
 		});
 
@@ -97,7 +98,8 @@
 				trigger: '#squishy',
 				start: 'top bottom',
 				end: 'top 20%',
-				scrub: isMobile ? 0.4 : 1 // Slightly more responsive on mobile
+				scrub: isMobile ? 0.4 : 1, // Slightly more responsive on mobile
+				immediateRender: false // Prevent immediate render to avoid popping
 			}
 		});
 
