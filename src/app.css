@@ -179,10 +179,12 @@ pre {
  	object-fit: cover;
  	object-position: center;
  	opacity: 1;
+ 	transform: translateY(15%) scale(1.1); /* Initial state to match GSAP fromTo */
  }
 
  #parallax-fg {
  	object-position: center bottom; /* Ensure foreground covers bottom properly */
+ 	transform: translateY(25%) scale(1.05); /* Initial state to match GSAP fromTo */
  }
 
  .jianka-image-overlay {
@@ -235,11 +237,13 @@ pre {
 
  	#parallax-bg {
  		object-position: center center; /* Ensure background is centered */
+ 		transform: translateY(2%) scale(1.01); /* Mobile initial state */
  	}
 
  	#parallax-fg {
  		object-position: center bottom; /* Align foreground with background */
  		height: 100%; /* Match background height exactly */
+ 		transform: translateY(8%) scale(1.03); /* Mobile initial state */
  	}
 
  	.jianka-image {

@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
+  import { ResourceLoader } from './resourceLoader';
   
   let count = 0;
   let isLoading = true;
   let showBrand = false;
+  let resourceLoader = ResourceLoader.getInstance();
   
   onMount(() => {
     // Show brand after a short delay
@@ -12,17 +14,26 @@
       showBrand = true;
     }, 500);
     
-    const interval = setInterval(() => {
-      count += 1;
-      if (count >= 100) {
-        clearInterval(interval);
+    // Start tracking resources
+    resourceLoader.startTracking();
+    
+    // Listen to resource loading progress
+    resourceLoader.onProgress((progress) => {
+      count = Math.round(progress);
+      
+      if (progress >= 100) {
         setTimeout(() => {
           isLoading = false;
         }, 300);
       }
-    }, 25); // 25ms intervals for smooth countdown
+    });
     
-    return () => clearInterval(interval);
+    // Fallback: ensure loading completes even if resources don't load
+    setTimeout(() => {
+      if (isLoading) {
+        resourceLoader.forceComplete();
+      }
+    }, 5000); // 5 second maximum loading time
   });
 </script>
 

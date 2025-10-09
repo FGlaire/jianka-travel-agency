@@ -2,12 +2,14 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { fly, fade } from 'svelte/transition';
+  import { ResourceLoader } from './resourceLoader';
   
   let isTransitioning = false;
   let currentPage = '';
   let transitionKey = 0;
   let initialLoadComplete = false;
   let transitionTimeout: number | undefined;
+  let resourceLoader = ResourceLoader.getInstance();
   
   // Wait for initial loading screen to complete before enabling transitions
   onMount(() => {
@@ -29,7 +31,7 @@
   function startTransition() {
     // Clear any existing timeout
     if (transitionTimeout) {
-      clearTimeout(transitionTimeout);
+      window.clearTimeout(transitionTimeout);
     }
     
     isTransitioning = true;
@@ -42,17 +44,41 @@
       main.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
     }
     
-    // Show transition overlay
-    setTimeout(() => {
-      isTransitioning = false;
-      
-      // Show content after transition
-      if (main) {
-        main.style.opacity = '1';
-        main.style.transform = 'translateY(0)';
-        main.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
+    // Start tracking resources for the new page
+    resourceLoader.startTracking();
+    
+    // Wait for resources to load or minimum time
+    let resourcesLoaded = false;
+    let minTimeElapsed = false;
+    
+    // Track resource loading
+    resourceLoader.onProgress((progress) => {
+      if (progress >= 100 && !resourcesLoaded) {
+        resourcesLoaded = true;
+        completeTransition();
       }
-    }, 600); // Shorter transition for better UX
+    });
+    
+    // Minimum transition time
+    transitionTimeout = window.setTimeout(() => {
+      minTimeElapsed = true;
+      if (resourcesLoaded) {
+        completeTransition();
+      }
+    }, 400);
+    
+    function completeTransition() {
+      if (resourcesLoaded && minTimeElapsed) {
+        isTransitioning = false;
+        
+        // Show content after transition
+        if (main) {
+          main.style.opacity = '1';
+          main.style.transform = 'translateY(0)';
+          main.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out';
+        }
+      }
+    }
   }
 </script>
 
