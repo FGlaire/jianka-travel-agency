@@ -16,6 +16,17 @@
 		// Check if device is mobile
 		const isMobile = window.innerWidth <= 768;
 		
+		// Set initial parallax state immediately to prevent any popping
+		gsap.set('#parallax-bg', {
+			y: isMobile ? '2%' : '15%',
+			scale: isMobile ? 1.01 : 1.1
+		});
+		
+		gsap.set('#parallax-fg', {
+			y: isMobile ? '8%' : '25%',
+			scale: isMobile ? 1.03 : 1.05
+		});
+		
 		// Fade in the main content first
 		gsap.fromTo('.hero-content', 
 			{ opacity: 0 },
@@ -49,12 +60,6 @@
 			}
 		);
 
-		// Set initial state immediately to prevent popping
-		gsap.set('#parallax-bg', {
-			y: isMobile ? '2%' : '15%',
-			scale: isMobile ? 1.01 : 1.1
-		});
-
 		// Background layer (slowest movement) - reduce movement on mobile
 		gsap.to('#parallax-bg', {
 			y: isMobile ? '-0.5%' : '-5%',
@@ -86,12 +91,6 @@
 				end: 'top 30%',
 				scrub: isMobile ? 0.3 : 1
 			}
-		});
-
-		// Set initial state immediately to prevent popping
-		gsap.set('#parallax-fg', {
-			y: isMobile ? '8%' : '25%',
-			scale: isMobile ? 1.03 : 1.05
 		});
 
 		// Foreground layer (fastest movement) - reduce movement on mobile and sync with background
