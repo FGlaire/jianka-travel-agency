@@ -397,9 +397,11 @@
         const validatedRow = { ...row, _rowIndex: index + 1 };
         const errors: string[] = [];
 
-        // Add column validation errors if any
+        // Add column validation errors if any (but don't fail individual records for column structure issues)
         if (selectedFile.columnValidation && !selectedFile.columnValidation.isValid) {
-          errors.push(...selectedFile.columnValidation.errors);
+          // Only add warnings, not errors, for column structure issues
+          console.log('Column validation warnings:', selectedFile.columnValidation.warnings);
+          // Don't add column errors to individual row validation
         }
 
         // Validate each field
@@ -480,6 +482,17 @@
       console.log('Duplicate data length:', duplicateData.length);
       console.log('Sample success:', successData[0]);
       console.log('Sample failed:', failedData[0]);
+      
+      // Debug: Check if processedData has validation issues
+      console.log('Processed data validation check:');
+      processedData.slice(0, 3).forEach((row, index) => {
+        console.log(`Processed row ${index + 1}:`, {
+          id: row.id,
+          isValid: row._isValid,
+          errors: row._errors,
+          hasErrors: row._errors && row._errors.length > 0
+        });
+      });
 
       setTimeout(() => {
         isExtracting = false;
