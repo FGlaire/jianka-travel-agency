@@ -21,12 +21,14 @@
 			// Set initial parallax state to prevent any popping
 			gsap.set('#parallax-bg', {
 				y: isMobile ? '2%' : '15%',
-				scale: isMobile ? 1.01 : 1.1
+				scale: isMobile ? 1.01 : 1.1,
+				opacity: 1 // Show the background
 			});
 			
 			gsap.set('#parallax-fg', {
 				y: isMobile ? '8%' : '25%',
-				scale: isMobile ? 1.03 : 1.05
+				scale: isMobile ? 1.03 : 1.05,
+				opacity: 1 // Show the foreground
 			});
 		}, 50);
 		

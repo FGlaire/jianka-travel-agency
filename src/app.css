@@ -178,7 +178,7 @@ pre {
  	height: 120%; /* Extra height for parallax movement */
  	object-fit: cover;
  	object-position: center;
- 	opacity: 1;
+ 	opacity: 0; /* Hide until GSAP takes over */
  	transform: none !important; /* Force no transforms until GSAP takes over */
  }
 
