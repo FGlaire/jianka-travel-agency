@@ -38,7 +38,9 @@
     isDown: false,
     startX: 0,
     scrollLeft: 0,
-    container: null as HTMLElement | null
+    container: null as HTMLElement | null,
+    lastX: 0,
+    velocity: 0
   };
 
   function handleMouseDown(e: MouseEvent, container: HTMLElement) {
@@ -46,7 +48,10 @@
     dragState.container = container;
     dragState.startX = e.pageX - container.getBoundingClientRect().left;
     dragState.scrollLeft = container.scrollLeft;
+    dragState.lastX = e.pageX;
+    dragState.velocity = 0;
     container.classList.add('active');
+    container.style.cursor = 'grabbing';
     console.log('Mouse down on container');
   }
 
@@ -54,20 +59,63 @@
     dragState.isDown = false;
     dragState.container = null;
     container.classList.remove('active');
+    container.style.cursor = 'grab';
   }
 
   function handleMouseLeave(container: HTMLElement) {
     dragState.isDown = false;
     dragState.container = null;
     container.classList.remove('active');
+    container.style.cursor = 'grab';
   }
 
   function handleMouseMove(e: MouseEvent) {
     if (!dragState.isDown || !dragState.container) return;
+    
     e.preventDefault();
-    const x = e.pageX - dragState.container.getBoundingClientRect().left;
-    const walk = (x - dragState.startX) * 2;
+    
+    const currentX = e.pageX;
+    const deltaX = currentX - dragState.lastX;
+    dragState.velocity = deltaX;
+    
+    // Smoother scrolling with momentum
+    const walk = deltaX * 1.5; // Reduced multiplier for smoother feel
     dragState.container.scrollLeft = dragState.scrollLeft - walk;
+    
+    dragState.lastX = currentX;
+  }
+
+  function handleTouchStart(e: TouchEvent, container: HTMLElement) {
+    const touch = e.touches[0];
+    dragState.isDown = true;
+    dragState.container = container;
+    dragState.startX = touch.pageX - container.getBoundingClientRect().left;
+    dragState.scrollLeft = container.scrollLeft;
+    dragState.lastX = touch.pageX;
+    dragState.velocity = 0;
+    container.classList.add('active');
+    console.log('Touch start on container');
+  }
+
+  function handleTouchMove(e: TouchEvent) {
+    if (!dragState.isDown || !dragState.container) return;
+    
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const currentX = touch.pageX;
+    const deltaX = currentX - dragState.lastX;
+    
+    const walk = deltaX * 1.5;
+    dragState.container.scrollLeft = dragState.scrollLeft - walk;
+    
+    dragState.lastX = currentX;
+  }
+
+  function handleTouchEnd(container: HTMLElement) {
+    dragState.isDown = false;
+    dragState.container = null;
+    container.classList.remove('active');
   }
 
   // Travel field definitions for validation
@@ -150,13 +198,28 @@
       }
     };
 
-    document.addEventListener('mousemove', handleGlobalMouseMove);
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      handleTouchMove(e);
+    };
+
+    const handleGlobalTouchEnd = () => {
+      if (dragState.container) {
+        handleTouchEnd(dragState.container);
+      }
+    };
+
+    // Add event listeners with passive: false for better control
+    document.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
     document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
+    document.addEventListener('touchend', handleGlobalTouchEnd);
 
     // Cleanup on component destroy
     return () => {
       document.removeEventListener('mousemove', handleGlobalMouseMove);
       document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
     };
   });
 
@@ -678,6 +741,7 @@
           tabindex="0"
           on:mousedown={(e) => handleMouseDown(e, e.currentTarget)}
           on:mouseleave={(e) => handleMouseLeave(e.currentTarget)}
+          on:touchstart={(e) => handleTouchStart(e, e.currentTarget)}
         >
           <table class="files-table">
             <thead>
@@ -791,6 +855,7 @@
           tabindex="0"
           on:mousedown={(e) => handleMouseDown(e, e.currentTarget)}
           on:mouseleave={(e) => handleMouseLeave(e.currentTarget)}
+          on:touchstart={(e) => handleTouchStart(e, e.currentTarget)}
         >
           <table class="results-table">
             <thead>
@@ -1093,10 +1158,31 @@
     max-width: 100%;
     cursor: grab;
     user-select: none;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #cb9f4d #333333;
   }
 
   .table-container:active {
     cursor: grabbing;
+  }
+
+  .table-container::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .table-container::-webkit-scrollbar-track {
+    background: #333333;
+    border-radius: 4px;
+  }
+
+  .table-container::-webkit-scrollbar-thumb {
+    background: #cb9f4d;
+    border-radius: 4px;
+  }
+
+  .table-container::-webkit-scrollbar-thumb:hover {
+    background: #f4d03f;
   }
 
   .files-table,
