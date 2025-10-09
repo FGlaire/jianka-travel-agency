@@ -35,13 +35,13 @@
 
   // Travel field definitions for validation
   const travelFields = [
-    { key: 'id', name: 'ID', required: true, type: 'string' },
+    { key: 'id', name: 'ID', required: true, type: 'id' },
     { key: 'lastName', name: 'Last Name', required: true, type: 'string' },
     { key: 'firstName', name: 'First Name', required: true, type: 'string' },
     { key: 'email', name: 'Email', required: true, type: 'email' },
-    { key: 'phone', name: 'Phone', required: false, type: 'string' },
+    { key: 'phone', name: 'Phone', required: false, type: 'phone' },
     { key: 'dateOfBirth', name: 'Date of Birth', required: false, type: 'date' },
-    { key: 'passportNumber', name: 'Passport Number', required: false, type: 'string' },
+    { key: 'passportNumber', name: 'Passport Number', required: false, type: 'passport' },
     { key: 'nationality', name: 'Nationality', required: false, type: 'string' },
     { key: 'address', name: 'Address', required: false, type: 'string' },
     { key: 'city', name: 'City', required: false, type: 'string' },
@@ -345,6 +345,18 @@
           if (value && field.type === 'number' && isNaN(Number(value))) {
             errors.push(`${field.name} must be a valid number`);
           }
+
+          if (value && field.type === 'id' && !isValidId(value)) {
+            errors.push(`${field.name} must be numeric only (no letters)`);
+          }
+
+          if (value && field.type === 'phone' && !isValidPhone(value)) {
+            errors.push(`${field.name} must be a valid phone number`);
+          }
+
+          if (value && field.type === 'passport' && !isValidPassportNumber(value)) {
+            errors.push(`${field.name} must be 6-12 alphanumeric characters`);
+          }
         });
 
         validatedRow._errors = errors;
@@ -398,6 +410,21 @@
   function isValidDate(dateString: string): boolean {
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date.getTime());
+  }
+
+  function isValidId(id: string): boolean {
+    // ID must be numeric only (no letters)
+    return /^\d+$/.test(id.trim());
+  }
+
+  function isValidPhone(phone: string): boolean {
+    // Basic phone validation - allows various formats
+    return /^[\+]?[\d\s\-\(\)]{7,}$/.test(phone.trim());
+  }
+
+  function isValidPassportNumber(passport: string): boolean {
+    // Passport number validation - alphanumeric, 6-12 characters
+    return /^[A-Z0-9]{6,12}$/.test(passport.trim().toUpperCase());
   }
 
   function validateColumns(headers: string[]): { isValid: boolean; errors: string[]; warnings: string[] } {
