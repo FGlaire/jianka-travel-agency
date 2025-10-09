@@ -46,12 +46,12 @@
     { key: 'address', name: 'Address', required: false, type: 'string' },
     { key: 'city', name: 'City', required: false, type: 'string' },
     { key: 'country', name: 'Country', required: false, type: 'string' },
-    { key: 'postalCode', name: 'Postal Code', required: false, type: 'string' },
+    { key: 'postalCode', name: 'Postal Code', required: false, type: 'postal' },
     { key: 'emergencyContact', name: 'Emergency Contact', required: false, type: 'string' },
     { key: 'emergencyPhone', name: 'Emergency Phone', required: false, type: 'string' },
     { key: 'dietaryRequirements', name: 'Dietary Requirements', required: false, type: 'string' },
     { key: 'medicalConditions', name: 'Medical Conditions', required: false, type: 'string' },
-    { key: 'travelInsurance', name: 'Travel Insurance', required: false, type: 'string' },
+    { key: 'travelInsurance', name: 'Travel Insurance', required: false, type: 'insurance' },
     { key: 'preferredLanguage', name: 'Preferred Language', required: false, type: 'string' },
     { key: 'specialRequests', name: 'Special Requests', required: false, type: 'string' },
     { key: 'travelExperience', name: 'Travel Experience', required: false, type: 'string' },
@@ -105,7 +105,14 @@
     // Add drag scrolling functionality to table containers
     const addDragScrolling = () => {
       const tableContainers = document.querySelectorAll('.table-container');
-      tableContainers.forEach(container => {
+      console.log('Found table containers:', tableContainers.length);
+      
+      tableContainers.forEach((container, index) => {
+        // Skip if already initialized
+        if (container.hasAttribute('data-drag-initialized')) {
+          return;
+        }
+        
         let isDown = false;
         let startX: number;
         let scrollLeft: number;
@@ -116,6 +123,7 @@
           container.classList.add('active');
           startX = mouseEvent.pageX - container.getBoundingClientRect().left;
           scrollLeft = container.scrollLeft;
+          console.log('Mouse down on container', index);
         };
 
         const handleMouseLeave = () => {
@@ -133,7 +141,7 @@
           const mouseEvent = e as MouseEvent;
           mouseEvent.preventDefault();
           const x = mouseEvent.pageX - container.getBoundingClientRect().left;
-          const walk = (x - startX) * 2; // Scroll speed multiplier
+          const walk = (x - startX) * 2;
           container.scrollLeft = scrollLeft - walk;
         };
 
@@ -141,12 +149,16 @@
         container.addEventListener('mouseleave', handleMouseLeave);
         container.addEventListener('mouseup', handleMouseUp);
         container.addEventListener('mousemove', handleMouseMove);
+        container.setAttribute('data-drag-initialized', 'true');
+        
+        console.log('Drag scrolling initialized for container', index);
       });
     };
 
-    // Add drag scrolling immediately and also after a delay
+    // Add drag scrolling immediately and also after delays
     addDragScrolling();
     setTimeout(addDragScrolling, 500);
+    setTimeout(addDragScrolling, 1000);
   });
 
   function loadSampleData() {
@@ -357,6 +369,14 @@
           if (value && field.type === 'passport' && !isValidPassportNumber(value)) {
             errors.push(`${field.name} must be 6-12 alphanumeric characters`);
           }
+
+          if (value && field.type === 'postal' && !isValidPostalCode(value)) {
+            errors.push(`${field.name} must be numeric only`);
+          }
+
+          if (value && field.type === 'insurance' && !isValidTravelInsurance(value)) {
+            errors.push(`${field.name} must be 'yes' or 'no'`);
+          }
         });
 
         validatedRow._errors = errors;
@@ -423,8 +443,19 @@
   }
 
   function isValidPassportNumber(passport: string): boolean {
-    // Passport number validation - alphanumeric, 6-12 characters
-    return /^[A-Z0-9]{6,12}$/.test(passport.trim().toUpperCase());
+    // Passport number validation - alphanumeric, 6-12 characters, case insensitive
+    return /^[A-Z0-9]{6,12}$/i.test(passport.trim());
+  }
+
+  function isValidPostalCode(postalCode: string): boolean {
+    // Postal code must be numeric only
+    return /^\d+$/.test(postalCode.trim());
+  }
+
+  function isValidTravelInsurance(insurance: string): boolean {
+    // Travel insurance must be yes or no (case insensitive)
+    const normalized = insurance.trim().toLowerCase();
+    return normalized === 'yes' || normalized === 'no';
   }
 
   function validateColumns(headers: string[]): { isValid: boolean; errors: string[]; warnings: string[] } {
