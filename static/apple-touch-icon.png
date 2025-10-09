@@ -1,0 +1,11 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="90" cy="90" r="90" fill="#000000"/>
+  
+  <!-- JIANKA text styling -->
+  <text x="90" y="120" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#cb9f4d">J</text>
+  
+  <!-- Travel accent -->
+  <circle cx="90" cy="45" r="9" fill="#cb9f4d"/>
+  <path d="M67.5 45 L112.5 45" stroke="#cb9f4d" stroke-width="4" stroke-linecap="round"/>
+</svg>

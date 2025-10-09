@@ -49,11 +49,14 @@
 			}
 		);
 
-		// Background layer (slowest movement) - reduce movement on mobile
-		gsap.fromTo('#parallax-bg', {
+		// Set initial state immediately to prevent popping
+		gsap.set('#parallax-bg', {
 			y: isMobile ? '2%' : '15%',
 			scale: isMobile ? 1.01 : 1.1
-		}, {
+		});
+
+		// Background layer (slowest movement) - reduce movement on mobile
+		gsap.to('#parallax-bg', {
 			y: isMobile ? '-0.5%' : '-5%',
 			scale: 1,
 			ease: 'none',
@@ -61,8 +64,7 @@
 				trigger: '#squishy',
 				start: 'top bottom',
 				end: 'top 20%',
-				scrub: isMobile ? 0.3 : 1, // Much less aggressive scrubbing on mobile
-				immediateRender: false // Prevent immediate render to avoid popping
+				scrub: isMobile ? 0.3 : 1 // Much less aggressive scrubbing on mobile
 			}
 		});
 
@@ -86,11 +88,14 @@
 			}
 		});
 
-		// Foreground layer (fastest movement) - reduce movement on mobile and sync with background
-		gsap.fromTo('#parallax-fg', {
-			y: isMobile ? '8%' : '25%', // More noticeable movement on mobile
+		// Set initial state immediately to prevent popping
+		gsap.set('#parallax-fg', {
+			y: isMobile ? '8%' : '25%',
 			scale: isMobile ? 1.03 : 1.05
-		}, {
+		});
+
+		// Foreground layer (fastest movement) - reduce movement on mobile and sync with background
+		gsap.to('#parallax-fg', {
 			y: isMobile ? '-3%' : '-15%', // More noticeable movement on mobile
 			scale: 1,
 			ease: 'none',
@@ -98,8 +103,7 @@
 				trigger: '#squishy',
 				start: 'top bottom',
 				end: 'top 20%',
-				scrub: isMobile ? 0.4 : 1, // Slightly more responsive on mobile
-				immediateRender: false // Prevent immediate render to avoid popping
+				scrub: isMobile ? 0.4 : 1 // Slightly more responsive on mobile
 			}
 		});
 
