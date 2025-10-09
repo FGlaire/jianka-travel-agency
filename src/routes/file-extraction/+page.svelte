@@ -541,18 +541,48 @@
   }
 
   function isValidDate(dateString: string): boolean {
+    if (!dateString || dateString.trim() === '') return false;
+    
+    // Handle DD/MM/YYYY format (common in many countries)
+    if (dateString.includes('/')) {
+      const parts = dateString.split('/');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+        const year = parseInt(parts[2]);
+        
+        // Check if it's a valid date
+        const date = new Date(year, month - 1, day);
+        return date.getDate() === day && date.getMonth() === month - 1 && date.getFullYear() === year;
+      }
+    }
+    
+    // Handle YYYY-MM-DD format
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date.getTime());
   }
 
   function isValidId(id: string): boolean {
-    // ID must be numeric only (no letters)
+    if (!id || id.trim() === '') return false;
+    
+    // ID must be numeric only (no letters) - allow leading zeros
     return /^\d+$/.test(id.trim());
   }
 
   function isValidPhone(phone: string): boolean {
+    if (!phone || phone.trim() === '') return true; // Phone is optional
+    
+    const cleanPhone = phone.trim();
+    
+    // Handle negative numbers (like "-1522") - these are invalid
+    if (cleanPhone.startsWith('-') && !cleanPhone.includes('+')) {
+      return false;
+    }
+    
     // Basic phone validation - allows various formats
-    return /^[\+]?[\d\s\-\(\)]{7,}$/.test(phone.trim());
+    // Must have at least 7 digits and can include +, spaces, hyphens, parentheses
+    const phoneRegex = /^[\+]?[\d\s\-\(\)]{7,}$/;
+    return phoneRegex.test(cleanPhone);
   }
 
   function isValidPassportNumber(passport: string): boolean {
