@@ -32,15 +32,25 @@
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', { event, hasSession: !!session, hasUser: !!session?.user });
+      
       if (event === 'SIGNED_IN' && session?.user) {
         isLoggedIn = true;
         user = session.user;
         lastLoginTime = new Date(session.user.last_sign_in_at || session.user.created_at).toLocaleString();
+        console.log('User signed in:', session.user.email);
       } else if (event === 'SIGNED_OUT') {
         isLoggedIn = false;
         user = null;
         lastLoginTime = '';
         showAccountDropdown = false;
+        console.log('User signed out');
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        // Handle token refresh
+        isLoggedIn = true;
+        user = session.user;
+        lastLoginTime = new Date(session.user.last_sign_in_at || session.user.created_at).toLocaleString();
+        console.log('Token refreshed for user:', session.user.email);
       }
     });
 
