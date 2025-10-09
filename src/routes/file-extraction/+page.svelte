@@ -389,6 +389,8 @@
       const { duplicates, uniqueData } = detectDuplicates(selectedFile.data, duplicateFields);
       console.log('Duplicates found:', duplicates.length);
       console.log('Unique data:', uniqueData.length);
+      console.log('Sample duplicate:', duplicates[0]);
+      console.log('Sample unique:', uniqueData[0]);
       
       // Process and validate data
       const processedData = uniqueData.map((row: any, index: number) => {
@@ -470,6 +472,14 @@
       extractedData = [...processedData, ...duplicateData];
       successData = processedData.filter(row => row._isValid);
       failedData = [...processedData.filter(row => !row._isValid), ...duplicateData];
+
+      console.log('Final results:');
+      console.log('Processed data length:', processedData.length);
+      console.log('Success data length:', successData.length);
+      console.log('Failed data length:', failedData.length);
+      console.log('Duplicate data length:', duplicateData.length);
+      console.log('Sample success:', successData[0]);
+      console.log('Sample failed:', failedData[0]);
 
       setTimeout(() => {
         isExtracting = false;
