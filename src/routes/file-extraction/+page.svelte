@@ -501,6 +501,27 @@
         });
       });
 
+      // FIX: Ensure we're not accidentally corrupting the data
+      // Reset the arrays to make sure they're clean
+      successData = [];
+      failedData = [];
+      
+      // Re-process the data to ensure clean state
+      processedData.forEach(row => {
+        if (row._isValid) {
+          successData.push(row);
+        } else {
+          failedData.push(row);
+        }
+      });
+      
+      // Add duplicates to failed data
+      duplicateData.forEach(dup => {
+        failedData.push(dup);
+      });
+      
+      console.log('After fix - Success:', successData.length, 'Failed:', failedData.length);
+
       setTimeout(() => {
         isExtracting = false;
         extractionProgress = 0;
