@@ -179,12 +179,12 @@ pre {
  	object-fit: cover;
  	object-position: center;
  	opacity: 1;
- 	/* Remove initial transform - let GSAP handle it */
+ 	transform: none !important; /* Force no transforms until GSAP takes over */
  }
 
  #parallax-fg {
  	object-position: center bottom; /* Ensure foreground covers bottom properly */
- 	/* Remove initial transform - let GSAP handle it */
+ 	transform: none !important; /* Force no transforms until GSAP takes over */
  }
 
  .jianka-image-overlay {
