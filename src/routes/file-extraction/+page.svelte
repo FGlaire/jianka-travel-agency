@@ -78,8 +78,8 @@
     const currentX = e.pageX;
     const deltaX = currentX - dragState.startX;
     
-    // Smoother scrolling with reduced sensitivity
-    const scrollSensitivity = 0.7; // Reduce sensitivity for smoother feel
+    // Even smoother scrolling for Brave browser
+    const scrollSensitivity = 0.5; // Further reduced for smoother feel
     dragState.container.scrollLeft = dragState.scrollLeft - (deltaX * scrollSensitivity);
     
     console.log('Mouse move - deltaX:', deltaX, 'scrollLeft:', dragState.container.scrollLeft);
@@ -106,8 +106,8 @@
     const currentX = touch.pageX;
     const deltaX = currentX - dragState.startX;
     
-    // Smoother scrolling with reduced sensitivity
-    const scrollSensitivity = 0.7;
+    // Even smoother scrolling for Brave browser
+    const scrollSensitivity = 0.5;
     dragState.container.scrollLeft = dragState.scrollLeft - (deltaX * scrollSensitivity);
   }
 
@@ -405,6 +405,20 @@
           });
         });
       }
+      
+      // Debug: Check for email duplicates specifically
+      console.log('Email duplicate check:');
+      const emailMap = new Map();
+      selectedFile.data.forEach((row, index) => {
+        if (row.email) {
+          const normalizedEmail = row.email.toString().trim().toLowerCase();
+          if (emailMap.has(normalizedEmail)) {
+            console.log(`Email duplicate found: "${row.email}" (row ${index + 1}) matches "${emailMap.get(normalizedEmail).email}" (row ${emailMap.get(normalizedEmail).row + 1})`);
+          } else {
+            emailMap.set(normalizedEmail, { email: row.email, row: index });
+          }
+        }
+      });
       
       // Process and validate data
       const processedData = uniqueData.map((row: any, index: number) => {
