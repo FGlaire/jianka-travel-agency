@@ -44,6 +44,7 @@
   };
 
   function handleMouseDown(e: MouseEvent, container: HTMLElement) {
+    e.preventDefault();
     dragState.isDown = true;
     dragState.container = container;
     dragState.startX = e.pageX - container.getBoundingClientRect().left;
@@ -52,7 +53,7 @@
     dragState.velocity = 0;
     container.classList.add('active');
     container.style.cursor = 'grabbing';
-    console.log('Mouse down on container');
+    console.log('Mouse down on container, scrollLeft:', container.scrollLeft);
   }
 
   function handleMouseUp(container: HTMLElement) {
@@ -80,7 +81,10 @@
     
     // Smoother scrolling with momentum
     const walk = deltaX * 1.5; // Reduced multiplier for smoother feel
-    dragState.container.scrollLeft = dragState.scrollLeft - walk;
+    const newScrollLeft = dragState.scrollLeft - walk;
+    dragState.container.scrollLeft = newScrollLeft;
+    
+    console.log('Mouse move - deltaX:', deltaX, 'walk:', walk, 'newScrollLeft:', newScrollLeft);
     
     dragState.lastX = currentX;
   }
@@ -392,6 +396,21 @@
       console.log('Sample duplicate:', duplicates[0]);
       console.log('Sample unique:', uniqueData[0]);
       
+      // Debug: Log all duplicates to see what's being detected
+      if (duplicates.length > 0) {
+        console.log('All duplicates detected:');
+        duplicates.forEach((dup, index) => {
+          console.log(`Duplicate ${index + 1}:`, {
+            row: dup._duplicateIndex + 1,
+            reason: dup._duplicateReason,
+            email: dup.email,
+            id: dup.id,
+            passport: dup.passportNumber,
+            phone: dup.phone
+          });
+        });
+      }
+      
       // Process and validate data
       const processedData = uniqueData.map((row: any, index: number) => {
         const validatedRow = { ...row, _rowIndex: index + 1 };
@@ -650,7 +669,15 @@
       for (const field of keyFields) {
         const value = row[field];
         if (value && value.toString().trim() !== '') {
-          const normalizedValue = value.toString().toLowerCase().trim();
+          let normalizedValue: string;
+          
+          // Special handling for email - normalize but preserve case for display
+          if (field === 'email') {
+            normalizedValue = value.toString().trim().toLowerCase();
+          } else {
+            normalizedValue = value.toString().toLowerCase().trim();
+          }
+          
           const fieldKey = `${field}:${normalizedValue}`;
           
           if (seen.has(fieldKey)) {
