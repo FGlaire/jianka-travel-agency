@@ -78,8 +78,8 @@
     const currentX = e.pageX;
     const deltaX = currentX - dragState.startX;
     
-    // Even smoother scrolling for Brave browser
-    const scrollSensitivity = 0.5; // Further reduced for smoother feel
+    // Much more responsive scrolling - almost 1:1 ratio
+    const scrollSensitivity = 0.9; // Much more responsive
     dragState.container.scrollLeft = dragState.scrollLeft - (deltaX * scrollSensitivity);
     
     console.log('Mouse move - deltaX:', deltaX, 'scrollLeft:', dragState.container.scrollLeft);
@@ -106,8 +106,8 @@
     const currentX = touch.pageX;
     const deltaX = currentX - dragState.startX;
     
-    // Even smoother scrolling for Brave browser
-    const scrollSensitivity = 0.5;
+    // Much more responsive scrolling - almost 1:1 ratio
+    const scrollSensitivity = 0.9;
     dragState.container.scrollLeft = dragState.scrollLeft - (deltaX * scrollSensitivity);
   }
 
