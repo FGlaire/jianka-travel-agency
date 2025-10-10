@@ -120,30 +120,30 @@
   // Travel field definitions for validation
   const travelFields = [
     { key: 'id', name: 'ID', required: true, type: 'id' },
-    { key: 'lastName', name: 'Last Name', required: true, type: 'string' },
-    { key: 'firstName', name: 'First Name', required: true, type: 'string' },
+    { key: 'lastName', name: 'Last Name', required: true, type: 'name' },
+    { key: 'firstName', name: 'First Name', required: true, type: 'name' },
     { key: 'email', name: 'Email', required: true, type: 'email' },
     { key: 'phone', name: 'Phone', required: false, type: 'phone' },
     { key: 'dateOfBirth', name: 'Date of Birth', required: false, type: 'date' },
     { key: 'passportNumber', name: 'Passport Number', required: false, type: 'passport' },
-    { key: 'nationality', name: 'Nationality', required: false, type: 'string' },
-    { key: 'address', name: 'Address', required: false, type: 'string' },
-    { key: 'city', name: 'City', required: false, type: 'string' },
-    { key: 'country', name: 'Country', required: false, type: 'string' },
+    { key: 'nationality', name: 'Nationality', required: false, type: 'name' },
+    { key: 'address', name: 'Address', required: false, type: 'text' },
+    { key: 'city', name: 'City', required: false, type: 'name' },
+    { key: 'country', name: 'Country', required: false, type: 'name' },
     { key: 'postalCode', name: 'Postal Code', required: false, type: 'postal' },
-    { key: 'emergencyContact', name: 'Emergency Contact', required: false, type: 'string' },
-    { key: 'emergencyPhone', name: 'Emergency Phone', required: false, type: 'string' },
-    { key: 'dietaryRequirements', name: 'Dietary Requirements', required: false, type: 'string' },
-    { key: 'medicalConditions', name: 'Medical Conditions', required: false, type: 'string' },
+    { key: 'emergencyContact', name: 'Emergency Contact', required: false, type: 'name' },
+    { key: 'emergencyPhone', name: 'Emergency Phone', required: false, type: 'phone' },
+    { key: 'dietaryRequirements', name: 'Dietary Requirements', required: false, type: 'text' },
+    { key: 'medicalConditions', name: 'Medical Conditions', required: false, type: 'text' },
     { key: 'travelInsurance', name: 'Travel Insurance', required: false, type: 'insurance' },
-    { key: 'preferredLanguage', name: 'Preferred Language', required: false, type: 'string' },
-    { key: 'specialRequests', name: 'Special Requests', required: false, type: 'string' },
-    { key: 'travelExperience', name: 'Travel Experience', required: false, type: 'string' },
+    { key: 'preferredLanguage', name: 'Preferred Language', required: false, type: 'language' },
+    { key: 'specialRequests', name: 'Special Requests', required: false, type: 'text' },
+    { key: 'travelExperience', name: 'Travel Experience', required: false, type: 'text' },
     { key: 'budget', name: 'Budget', required: false, type: 'number' },
-    { key: 'travelDates', name: 'Travel Dates', required: false, type: 'string' },
-    { key: 'destination', name: 'Destination', required: false, type: 'string' },
-    { key: 'accommodationType', name: 'Accommodation Type', required: false, type: 'string' },
-    { key: 'transportation', name: 'Transportation', required: false, type: 'string' }
+    { key: 'travelDates', name: 'Travel Dates', required: false, type: 'text' },
+    { key: 'destination', name: 'Destination', required: false, type: 'name' },
+    { key: 'accommodationType', name: 'Accommodation Type', required: false, type: 'text' },
+    { key: 'transportation', name: 'Transportation', required: false, type: 'text' }
   ];
 
   // Expected column order for validation
@@ -471,6 +471,19 @@
           if (value && field.type === 'insurance' && !isValidTravelInsurance(value)) {
             errors.push(`${field.name} must be 'yes' or 'no'`);
           }
+
+          // New stricter validations
+          if (value && field.type === 'name' && !isValidName(value)) {
+            errors.push(`${field.name} must contain only letters, spaces, hyphens, and apostrophes (no emojis, numbers, or special characters)`);
+          }
+
+          if (value && field.type === 'language' && !isValidLanguage(value)) {
+            errors.push(`${field.name} must contain only letters, spaces, hyphens, and apostrophes (no emojis, numbers, or special characters)`);
+          }
+
+          if (value && field.type === 'text' && !isValidText(value, false)) {
+            errors.push(`${field.name} must contain only letters, spaces, and basic punctuation (no emojis or special characters)`);
+          }
         });
 
         validatedRow._errors = errors;
@@ -629,6 +642,62 @@
     // Travel insurance must be yes or no (case insensitive)
     const normalized = insurance.trim().toLowerCase();
     return normalized === 'yes' || normalized === 'no';
+  }
+
+  // New validation functions for stricter validation
+  function containsEmojis(text: string): boolean {
+    // Check for emoji characters (Unicode ranges for emojis)
+    const emojiRegex = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u;
+    return emojiRegex.test(text);
+  }
+
+  function isValidLanguage(language: string): boolean {
+    if (!language || language.trim() === '') return true; // Language is optional
+    
+    const cleanLanguage = language.trim();
+    
+    // Check for emojis
+    if (containsEmojis(cleanLanguage)) return false;
+    
+    // Check for numbers
+    if (/\d/.test(cleanLanguage)) return false;
+    
+    // Check for special characters (allow spaces, hyphens, apostrophes)
+    if (!/^[a-zA-Z\s\-']+$/.test(cleanLanguage)) return false;
+    
+    // Must be at least 2 characters
+    return cleanLanguage.length >= 2;
+  }
+
+  function isValidText(text: string, allowNumbers: boolean = false): boolean {
+    if (!text || text.trim() === '') return true; // Text fields are optional
+    
+    const cleanText = text.trim();
+    
+    // Check for emojis
+    if (containsEmojis(cleanText)) return false;
+    
+    // Check for special characters (allow basic punctuation)
+    const allowedChars = allowNumbers ? /^[a-zA-Z0-9\s\-'.,!?]+$/ : /^[a-zA-Z\s\-'.,!?]+$/;
+    if (!allowedChars.test(cleanText)) return false;
+    
+    // Must be at least 1 character
+    return cleanText.length >= 1;
+  }
+
+  function isValidName(name: string): boolean {
+    if (!name || name.trim() === '') return true; // Names are optional
+    
+    const cleanName = name.trim();
+    
+    // Check for emojis
+    if (containsEmojis(cleanName)) return false;
+    
+    // Check for numbers and special characters (allow spaces, hyphens, apostrophes)
+    if (!/^[a-zA-Z\s\-']+$/.test(cleanName)) return false;
+    
+    // Must be at least 1 character
+    return cleanName.length >= 1;
   }
 
   function validateColumns(headers: string[]): { isValid: boolean; errors: string[]; warnings: string[] } {
