@@ -47,7 +47,7 @@
     e.preventDefault();
     dragState.isDown = true;
     dragState.container = container;
-    dragState.startX = e.pageX - container.getBoundingClientRect().left;
+    dragState.startX = e.pageX;
     dragState.scrollLeft = container.scrollLeft;
     dragState.lastX = e.pageX;
     dragState.velocity = 0;
@@ -76,17 +76,12 @@
     e.preventDefault();
     
     const currentX = e.pageX;
-    const deltaX = currentX - dragState.lastX;
-    dragState.velocity = deltaX;
+    const deltaX = currentX - dragState.startX;
     
-    // Smoother scrolling with momentum
-    const walk = deltaX * 1.5; // Reduced multiplier for smoother feel
-    const newScrollLeft = dragState.scrollLeft - walk;
-    dragState.container.scrollLeft = newScrollLeft;
+    // Direct scroll calculation - simpler and more reliable
+    dragState.container.scrollLeft = dragState.scrollLeft - deltaX;
     
-    console.log('Mouse move - deltaX:', deltaX, 'walk:', walk, 'newScrollLeft:', newScrollLeft);
-    
-    dragState.lastX = currentX;
+    console.log('Mouse move - deltaX:', deltaX, 'scrollLeft:', dragState.container.scrollLeft);
   }
 
   function handleTouchStart(e: TouchEvent, container: HTMLElement) {
@@ -662,43 +657,32 @@
     const uniqueData: any[] = [];
     
     data.forEach((row, index) => {
-      let isDuplicate = false;
-      let duplicateReason = '';
+      // Create a composite key from ALL specified fields
+      const compositeKey = keyFields
+        .map(field => {
+          const value = row[field];
+          return value && value.toString().trim() !== '' ? value.toString().toLowerCase().trim() : '';
+        })
+        .join('|');
       
-      // Check each field individually for uniqueness
-      for (const field of keyFields) {
-        const value = row[field];
-        if (value && value.toString().trim() !== '') {
-          let normalizedValue: string;
-          
-          // Special handling for email - normalize but preserve case for display
-          if (field === 'email') {
-            normalizedValue = value.toString().trim().toLowerCase();
-          } else {
-            normalizedValue = value.toString().toLowerCase().trim();
-          }
-          
-          const fieldKey = `${field}:${normalizedValue}`;
-          
-          if (seen.has(fieldKey)) {
-            // This is a duplicate based on this field
-            const originalIndex = seen.get(fieldKey)![0];
-            isDuplicate = true;
-            duplicateReason = `${field} matches row ${originalIndex + 1}`;
-            break;
-          } else {
-            // Mark this value as seen
-            seen.set(fieldKey, [index]);
-          }
-        }
+      // Skip rows where all key fields are empty
+      if (compositeKey === '') {
+        const uniqueRow = {
+          ...row,
+          _isDuplicate: false,
+          _originalIndex: index
+        };
+        uniqueData.push(uniqueRow);
+        return;
       }
       
-      if (isDuplicate) {
-        // This is a duplicate
+      if (seen.has(compositeKey)) {
+        // This is a duplicate based on ALL key fields matching
+        const originalIndex = seen.get(compositeKey)![0];
         duplicates.push({
           ...row,
           _isDuplicate: true,
-          _duplicateReason: duplicateReason,
+          _duplicateReason: `All key fields match row ${originalIndex + 1}`,
           _duplicateIndex: index
         });
       } else {
@@ -709,6 +693,7 @@
           _originalIndex: index
         };
         uniqueData.push(uniqueRow);
+        seen.set(compositeKey, [index]);
       }
     });
     
