@@ -143,7 +143,7 @@ export class ResourceLoader {
   }
 
   // Check if loading is complete
-  isComplete(): boolean {
+  getIsComplete(): boolean {
     return this.isComplete;
   }
 }

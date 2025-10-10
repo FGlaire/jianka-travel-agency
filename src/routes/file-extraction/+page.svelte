@@ -382,8 +382,8 @@
     }, 150);
 
     try {
-      // First, detect duplicates based on ID, email, and passport number
-      const duplicateFields = ['id', 'email', 'passportNumber'];
+      // First, detect duplicates based on ID, email, passport number, and phone
+      const duplicateFields = ['id', 'email', 'passportNumber', 'phone'];
       console.log('Checking for duplicates with fields:', duplicateFields);
       console.log('Sample data:', selectedFile.data.slice(0, 2));
       const { duplicates, uniqueData } = detectDuplicates(selectedFile.data, duplicateFields);
@@ -473,7 +473,7 @@
       const duplicateData = duplicates.map(dup => ({
         ...dup,
         _rowIndex: dup._duplicateIndex + 1,
-        _errors: [`Duplicate entry - matches row ${dup._duplicateOf + 1}`],
+        _errors: [`Duplicate entry - ${dup._duplicateReason}`],
         _isValid: false,
         _isDuplicate: true
       }));
@@ -643,43 +643,37 @@
     const uniqueData: any[] = [];
     
     data.forEach((row, index) => {
-      // Create a composite key from specified fields, filtering out empty values
-      const compositeKey = keyFields
-        .map(field => {
-          const value = row[field];
-          // Only include non-empty values in the composite key
-          return value && value.toString().trim() !== '' ? value.toString().toLowerCase().trim() : '';
-        })
-        .filter(val => val !== '') // Remove empty values
-        .join('|');
+      let isDuplicate = false;
+      let duplicateReason = '';
       
-      // Skip rows where all key fields are empty
-      if (compositeKey === '') {
-        const uniqueRow = {
-          ...row,
-          _isDuplicate: false,
-          _originalIndex: index
-        };
-        uniqueData.push(uniqueRow);
-        return;
+      // Check each field individually for uniqueness
+      for (const field of keyFields) {
+        const value = row[field];
+        if (value && value.toString().trim() !== '') {
+          const normalizedValue = value.toString().toLowerCase().trim();
+          const fieldKey = `${field}:${normalizedValue}`;
+          
+          if (seen.has(fieldKey)) {
+            // This is a duplicate based on this field
+            const originalIndex = seen.get(fieldKey)![0];
+            isDuplicate = true;
+            duplicateReason = `${field} matches row ${originalIndex + 1}`;
+            break;
+          } else {
+            // Mark this value as seen
+            seen.set(fieldKey, [index]);
+          }
+        }
       }
       
-      if (seen.has(compositeKey)) {
+      if (isDuplicate) {
         // This is a duplicate
-        const originalIndex = seen.get(compositeKey)![0];
         duplicates.push({
           ...row,
           _isDuplicate: true,
-          _duplicateOf: originalIndex,
+          _duplicateReason: duplicateReason,
           _duplicateIndex: index
         });
-        
-        // Also mark the original as having duplicates
-        const originalRow = uniqueData.find(r => r._originalIndex === originalIndex);
-        if (originalRow) {
-          originalRow._hasDuplicates = true;
-          originalRow._duplicateCount = (originalRow._duplicateCount || 0) + 1;
-        }
       } else {
         // This is unique
         const uniqueRow = {
@@ -688,7 +682,6 @@
           _originalIndex: index
         };
         uniqueData.push(uniqueRow);
-        seen.set(compositeKey, [index]);
       }
     });
     
