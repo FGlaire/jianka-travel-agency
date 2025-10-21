@@ -8,6 +8,7 @@ export interface FieldMapping {
   format?: string;
   validation?: ValidationRule[];
   required?: boolean;
+  headerName?: string; // CSV header name for this field
 }
 
 export interface ValidationRule {
@@ -261,9 +262,14 @@ export class SmartTemplateMatcher {
     const normalizedName = fieldName.toLowerCase().replace(/[_\s-]/g, '');
     
     for (const [key, mapping] of Object.entries(template.field_mappings)) {
+      // Handle both old string format and new FieldMapping format
+      const fieldMapping = typeof mapping === 'string' 
+        ? { type: 'text' as const, headerName: mapping, required: false }
+        : mapping as FieldMapping;
+      
       const normalizedKey = key.toLowerCase().replace(/[_\s-]/g, '');
       if (normalizedName === normalizedKey) {
-        return mapping;
+        return fieldMapping;
       }
     }
     
@@ -329,18 +335,23 @@ export class SmartTemplateMatcher {
     
     // Generate patterns from field mappings
     for (const [fieldKey, mapping] of Object.entries(template.field_mappings)) {
+      // Handle both old string format and new FieldMapping format
+      const fieldMapping = typeof mapping === 'string' 
+        ? { type: 'text' as const, headerName: mapping, required: false }
+        : mapping as FieldMapping;
+      
       const fieldPattern: Pattern = {
         fieldNames: [fieldKey],
-        fieldTypes: [mapping.type],
-        weight: mapping.required ? 1.0 : 0.7
+        fieldTypes: [fieldMapping.type],
+        weight: fieldMapping.required ? 1.0 : 0.7
       };
       
       // Add data patterns based on field type
-      if (mapping.type === 'email') {
+      if (fieldMapping.type === 'email') {
         fieldPattern.dataPatterns = [FIELD_PATTERNS.email.regex];
-      } else if (mapping.type === 'phone') {
+      } else if (fieldMapping.type === 'phone') {
         fieldPattern.dataPatterns = [FIELD_PATTERNS.phone.regex];
-      } else if (mapping.type === 'date') {
+      } else if (fieldMapping.type === 'date') {
         fieldPattern.dataPatterns = [FIELD_PATTERNS.date.regex];
       }
       
@@ -413,7 +424,7 @@ export function processRuntimeFields(row: any, runtimeFields: any[] = []): any {
           if (row.dateOfBirth) {
             const birthDate = new Date(row.dateOfBirth);
             const now = new Date();
-            value = Math.floor((now.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+            value = Math.floor((now.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)).toString();
           }
           break;
       }

@@ -59,7 +59,7 @@
       if (data.templates) {
         templates = data.templates;
         // Enhance templates with smart matching capabilities
-        enhancedTemplates = data.templates.map(template => SmartTemplateMatcher.enhanceTemplate(template));
+        enhancedTemplates = data.templates.map((template: any) => SmartTemplateMatcher.enhanceTemplate(template));
         templateMatcher = new SmartTemplateMatcher(enhancedTemplates);
       }
     } catch (error) {
@@ -329,7 +329,14 @@
 										<span class="arrow">→</span>
 										<input 
 											type="text" 
-											bind:value={newTemplate.fieldMappings[fieldKey]?.headerName || fieldKey}
+											value={newTemplate.fieldMappings[fieldKey]?.headerName || fieldKey}
+											on:input={(e) => {
+												const target = e.target as HTMLInputElement;
+												if (!newTemplate.fieldMappings[fieldKey]) {
+													newTemplate.fieldMappings[fieldKey] = { ...fieldMapping };
+												}
+												newTemplate.fieldMappings[fieldKey].headerName = target.value;
+											}}
 											placeholder={fieldKey}
 											class="header-input"
 										/>

@@ -166,8 +166,8 @@
     if (selectedTemplate && selectedTemplate.field_mappings) {
       // Use template field mappings
       const templateMappings = selectedTemplate.field_mappings;
-      for (const [fieldKey, templateHeader] of Object.entries(templateMappings)) {
-        if (templateHeader === header) {
+      for (const [fieldKey, fieldMapping] of Object.entries(templateMappings)) {
+        if (fieldMapping.headerName === header || fieldKey === header) {
           return fieldKey;
         }
       }
