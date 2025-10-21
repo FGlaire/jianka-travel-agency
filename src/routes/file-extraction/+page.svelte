@@ -269,10 +269,14 @@
 
   async function loadCsvFiles() {
     try {
+      console.log('Loading CSV files from database...');
       const response = await fetch('/api/csv-files');
       const data = await response.json();
       
+      console.log('CSV files API response:', data);
+      
       if (data.csvFiles) {
+        console.log('Found CSV files:', data.csvFiles.length);
         uploadedFiles = data.csvFiles.map((file: any) => ({
           id: file.id,
           name: file.file_name,
@@ -283,6 +287,9 @@
           columnValidation: file.column_validation,
           dbId: file.id
         }));
+        console.log('Mapped uploaded files:', uploadedFiles);
+      } else {
+        console.log('No CSV files found in response');
       }
     } catch (error) {
       console.error('Error loading CSV files:', error);
@@ -291,6 +298,7 @@
 
   async function saveCsvFile(fileObj: any) {
     try {
+      console.log('Saving CSV file to database:', fileObj.name);
       const response = await fetch('/api/csv-files', {
         method: 'POST',
         headers: {
@@ -311,11 +319,15 @@
       });
 
       const data = await response.json();
+      console.log('Save CSV file response:', data);
       
       if (data.csvFile) {
         // Update the file object with database ID
         fileObj.dbId = data.csvFile.id;
+        console.log('CSV file saved with ID:', data.csvFile.id);
         return data.csvFile;
+      } else {
+        console.error('Failed to save CSV file:', data);
       }
     } catch (error) {
       console.error('Error saving CSV file:', error);

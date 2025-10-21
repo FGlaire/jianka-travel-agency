@@ -3,12 +3,17 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
   try {
+    console.log('GET /api/csv-files - Starting request');
     const { data: { user } } = await locals.supabase.auth.getUser();
     
+    console.log('User authentication result:', user ? 'Authenticated' : 'Not authenticated');
+    
     if (!user) {
+      console.log('No user found, returning 401');
       return json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('Fetching CSV files for user:', user.id);
     // Get user's CSV files
     const { data: csvFiles, error } = await locals.supabase
       .from('csv_files')
@@ -21,6 +26,7 @@ export const GET: RequestHandler = async ({ locals }) => {
       return json({ error: 'Failed to fetch CSV files' }, { status: 500 });
     }
 
+    console.log('Found CSV files:', csvFiles?.length || 0);
     return json({ csvFiles });
   } catch (error) {
     console.error('Error in GET /api/csv-files:', error);
@@ -30,16 +36,22 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
+    console.log('POST /api/csv-files - Starting request');
     const { data: { user } } = await locals.supabase.auth.getUser();
     
+    console.log('User authentication result:', user ? 'Authenticated' : 'Not authenticated');
+    
     if (!user) {
+      console.log('No user found, returning 401');
       return json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { fileName, fileSize, fileData, columns, columnValidation, extractionResults } = body;
+    console.log('Received CSV file data:', { fileName, fileSize, columns: columns?.length });
 
     if (!fileName || !fileData || !columns) {
+      console.log('Missing required fields');
       return json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -63,6 +75,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Failed to save CSV file' }, { status: 500 });
     }
 
+    console.log('CSV file saved successfully:', csvFile.id);
     return json({ csvFile });
   } catch (error) {
     console.error('Error in POST /api/csv-files:', error);
