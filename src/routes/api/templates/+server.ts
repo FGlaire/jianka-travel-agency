@@ -3,7 +3,8 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals }) => {
   try {
-    const { data: { user } } = await locals.supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
+    const user = sessionData?.session?.user;
     
     if (!user) {
       return json({ error: 'Unauthorized' }, { status: 401 });
@@ -30,7 +31,8 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
-    const { data: { user } } = await locals.supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
+    const user = sessionData?.session?.user;
     
     if (!user) {
       return json({ error: 'Unauthorized' }, { status: 401 });
@@ -82,7 +84,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 export const PUT: RequestHandler = async ({ request, locals }) => {
   try {
-    const { data: { user } } = await locals.supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
+    const user = sessionData?.session?.user;
     
     if (!user) {
       return json({ error: 'Unauthorized' }, { status: 401 });
@@ -123,7 +126,8 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 
 export const DELETE: RequestHandler = async ({ request, locals }) => {
   try {
-    const { data: { user } } = await locals.supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
+    const user = sessionData?.session?.user;
     
     if (!user) {
       return json({ error: 'Unauthorized' }, { status: 401 });
