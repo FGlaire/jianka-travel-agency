@@ -324,6 +324,10 @@
       if (data.csvFile) {
         // Update the file object with database ID
         fileObj.dbId = data.csvFile.id;
+        // Update the uploadedFiles array to trigger reactivity
+        uploadedFiles = uploadedFiles.map(file => 
+          file.id === fileObj.id ? { ...file, dbId: data.csvFile.id } : file
+        );
         console.log('CSV file saved with ID:', data.csvFile.id);
         return data.csvFile;
       } else {
@@ -1062,7 +1066,7 @@
         <!-- Smart Template Matching Results -->
         {#if showSmartMatching && templateMatches.length > 0}
           <div class="smart-matching-section">
-            <h4>🎯 Smart Template Matching</h4>
+            <h4>Smart Template Matching</h4>
             <p>We found {templateMatches.length} template(s) that match your CSV structure:</p>
             <div class="template-matches">
               {#each templateMatches.slice(0, 3) as match}
