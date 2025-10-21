@@ -15,7 +15,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         event.cookies.set(key, value, { 
           path: '/', 
           httpOnly: false, // Allow client-side access
-          secure: true,
+          secure: false, // Changed to false for development
           sameSite: 'lax',
           ...options 
         });
@@ -24,17 +24,11 @@ export const handle: Handle = async ({ event, resolve }) => {
         event.cookies.delete(key, { 
           path: '/', 
           httpOnly: false,
-          secure: true,
+          secure: false, // Changed to false for development
           sameSite: 'lax',
           ...options 
         });
       }
-    },
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce'
     }
   });
 
@@ -48,7 +42,7 @@ export const handle: Handle = async ({ event, resolve }) => {
           event.cookies.set(key, value, { 
             path: '/', 
             httpOnly: false,
-            secure: true,
+            secure: false, // Changed to false for development
             sameSite: 'lax',
             ...options 
           });
@@ -57,16 +51,11 @@ export const handle: Handle = async ({ event, resolve }) => {
           event.cookies.delete(key, { 
             path: '/', 
             httpOnly: false,
-            secure: true,
+            secure: false, // Changed to false for development
             sameSite: 'lax',
             ...options 
           });
         }
-      },
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false
       }
     });
     console.log('Admin client created successfully');
