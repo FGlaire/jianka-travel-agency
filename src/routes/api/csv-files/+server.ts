@@ -28,6 +28,22 @@ export const GET: RequestHandler = async ({ locals, request }) => {
       user = refreshData?.session?.user || user;
     }
     
+    // If still no user, try using admin client to verify the session
+    if (!user && sessionData?.session?.access_token && locals.supabaseAdmin) {
+      console.log('Still no user, trying admin client verification...');
+      try {
+        const { data: adminUser, error: adminError } = await locals.supabaseAdmin.auth.getUser(sessionData.session.access_token);
+        console.log('Admin user:', adminUser);
+        console.log('Admin error:', adminError);
+        if (adminUser?.user) {
+          user = adminUser.user;
+          console.log('Got user from admin client:', user);
+        }
+      } catch (adminErr) {
+        console.log('Admin client error:', adminErr);
+      }
+    }
+    
     console.log('Selected user:', user ? 'Found' : 'Not found');
     console.log('Session user:', sessionData?.session?.user);
     console.log('GetUser user:', userData?.user);
@@ -110,6 +126,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       console.log('Refresh data:', refreshData);
       console.log('Refresh error:', refreshError);
       user = refreshData?.session?.user || user;
+    }
+    
+    // If still no user, try using admin client to verify the session
+    if (!user && sessionData?.session?.access_token && locals.supabaseAdmin) {
+      console.log('Still no user, trying admin client verification...');
+      try {
+        const { data: adminUser, error: adminError } = await locals.supabaseAdmin.auth.getUser(sessionData.session.access_token);
+        console.log('Admin user:', adminUser);
+        console.log('Admin error:', adminError);
+        if (adminUser?.user) {
+          user = adminUser.user;
+          console.log('Got user from admin client:', user);
+        }
+      } catch (adminErr) {
+        console.log('Admin client error:', adminErr);
+      }
     }
     
     console.log('Selected user:', user ? 'Found' : 'Not found');
