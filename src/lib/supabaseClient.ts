@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { browser } from '$app/environment';
 
 // Use environment variables instead of hard-coded values
 const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL || 'https://jddbbnnbcsuktoevxeij.supabase.co';
@@ -10,7 +11,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    storage: window.localStorage,
+    storage: browser ? window.localStorage : undefined,
     storageKey: 'sb-jddbbnnbcsuktoevxeij-auth-token'
   }
 });
