@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ locals, request }) => {
   try {
-    console.log('GET /api/csv-files - Starting request');
+    console.log('GET /api/csv-files - Starting request v2');
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     
     // Try multiple authentication methods
@@ -103,7 +103,7 @@ export const GET: RequestHandler = async ({ locals, request }) => {
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
-    console.log('POST /api/csv-files - Starting request');
+    console.log('POST /api/csv-files - Starting request v2');
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     
     // Try multiple authentication methods
