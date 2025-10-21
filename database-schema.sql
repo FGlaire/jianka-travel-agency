@@ -1,8 +1,5 @@
 -- Database schema for JIANKA Travel Agency CSV files and templates
 
--- Enable Row Level Security
-ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
-
 -- Create CSV Files table
 CREATE TABLE IF NOT EXISTS csv_files (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

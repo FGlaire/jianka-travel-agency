@@ -180,8 +180,8 @@
 
 			{#if templates.length > 0}
 				<div class="templates-grid">
-					{#each templates as template}
-						<div class="template-card" transition:fly={{ y: 20, duration: 400, delay: 100 * $index }}>
+					{#each templates as template, index}
+						<div class="template-card" transition:fly={{ y: 20, duration: 400, delay: 100 * index }}>
 							<div class="template-header">
 								<h3>{template.template_name}</h3>
 								<div class="template-badges">
