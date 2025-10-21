@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
+  import { supabase } from '$lib/supabaseClient';
 
   // File upload state
   let fileInput: HTMLInputElement;
@@ -17,7 +18,21 @@
       errors: string[];
       warnings: string[];
     };
+    dbId?: string; // Database ID for deletion
   }> = [];
+
+  // Template state
+  let templates: Array<{
+    id: string;
+    template_name: string;
+    description: string;
+    field_mappings: any;
+    is_public: boolean;
+    is_default: boolean;
+    user_id: string;
+  }> = [];
+  let selectedTemplate: any = null;
+  let showTemplateSelector = false;
 
   // Extraction state
   let selectedFile: any = null;
@@ -151,6 +166,17 @@
 
   // Function to map CSV headers to expected field keys
   function mapHeaderToFieldKey(header: string): string {
+    if (selectedTemplate && selectedTemplate.field_mappings) {
+      // Use template field mappings
+      const templateMappings = selectedTemplate.field_mappings;
+      for (const [fieldKey, templateHeader] of Object.entries(templateMappings)) {
+        if (templateHeader === header) {
+          return fieldKey;
+        }
+      }
+    }
+    
+    // Fallback to default mapping
     const headerMap: { [key: string]: string } = {
       'ID': 'id',
       'Last Name': 'lastName',
@@ -183,8 +209,12 @@
   }
 
   onMount(() => {
+    // Load templates and CSV files from database
+    loadTemplates();
+    loadCsvFiles();
+    
     // Initialize with some sample data for demonstration
-    loadSampleData();
+    // loadSampleData();
     
     // Add global mouse move listener for drag scrolling
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -221,6 +251,103 @@
       document.removeEventListener('touchend', handleGlobalTouchEnd);
     };
   });
+
+  async function loadTemplates() {
+    try {
+      const response = await fetch('/api/templates');
+      const data = await response.json();
+      
+      if (data.templates) {
+        templates = data.templates;
+        // Set default template as selected
+        selectedTemplate = templates.find(t => t.is_default) || templates[0];
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  }
+
+  async function loadCsvFiles() {
+    try {
+      const response = await fetch('/api/csv-files');
+      const data = await response.json();
+      
+      if (data.csvFiles) {
+        uploadedFiles = data.csvFiles.map((file: any) => ({
+          id: file.id,
+          name: file.file_name,
+          size: file.file_size,
+          uploadDate: new Date(file.upload_date),
+          data: file.file_data || [],
+          columns: file.columns || [],
+          columnValidation: file.column_validation,
+          dbId: file.id
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading CSV files:', error);
+    }
+  }
+
+  async function saveCsvFile(fileObj: any) {
+    try {
+      const response = await fetch('/api/csv-files', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          fileName: fileObj.name,
+          fileSize: fileObj.size,
+          fileData: fileObj.data,
+          columns: fileObj.columns,
+          columnValidation: fileObj.columnValidation,
+          extractionResults: {
+            successData,
+            failedData,
+            extractedData
+          }
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.csvFile) {
+        // Update the file object with database ID
+        fileObj.dbId = data.csvFile.id;
+        return data.csvFile;
+      }
+    } catch (error) {
+      console.error('Error saving CSV file:', error);
+    }
+    return null;
+  }
+
+  async function deleteCsvFile(fileId: string) {
+    try {
+      const response = await fetch('/api/csv-files', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ fileId })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove from local array
+        uploadedFiles = uploadedFiles.filter(file => file.dbId !== fileId);
+        if (selectedFile?.dbId === fileId) {
+          selectedFile = null;
+        }
+        return true;
+      }
+    } catch (error) {
+      console.error('Error deleting CSV file:', error);
+    }
+    return false;
+  }
 
   function loadSampleData() {
     // Add a sample file for demonstration
@@ -300,6 +427,10 @@
       };
 
       uploadedFiles = [...uploadedFiles, fileObj];
+      
+      // Save to database
+      await saveCsvFile(fileObj);
+
       // Don't hide upload area - allow multiple file uploads
       // showUploadArea = false;
 
@@ -826,7 +957,43 @@
     <div class="upload-card">
       <h2>Upload CSV File</h2>
       
-      {#if showUploadArea}
+      <!-- Template Selector -->
+      {#if templates.length > 0}
+        <div class="template-selector">
+          <label for="template-select">Select Template:</label>
+          <select id="template-select" bind:value={selectedTemplate} on:change={() => showTemplateSelector = false}>
+            {#each templates as template}
+              <option value={template}>{template.template_name}</option>
+            {/each}
+          </select>
+          <button class="template-info-btn" on:click={() => showTemplateSelector = !showTemplateSelector}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 16v-4"/>
+              <path d="M12 8h.01"/>
+            </svg>
+          </button>
+        </div>
+        
+        {#if showTemplateSelector}
+          <div class="template-info">
+            <h4>{selectedTemplate?.template_name}</h4>
+            <p>{selectedTemplate?.description || 'No description available'}</p>
+            <div class="template-mappings">
+              <h5>Field Mappings:</h5>
+              <div class="mapping-grid">
+                {#each Object.entries(selectedTemplate?.field_mappings || {}) as [fieldKey, headerName]}
+                  <div class="mapping-item">
+                    <span class="field-key">{fieldKey}</span>
+                    <span class="arrow">→</span>
+                    <span class="header-name">{headerName}</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          </div>
+        {/if}
+      {/if}
         <div class="upload-area" class:uploading={isUploading}>
           <input
             bind:this={fileInput}
@@ -901,6 +1068,16 @@
                   <button class="extract-btn" on:click={() => selectFile(file)} disabled={isExtracting}>
                     {selectedFile?.id === file.id ? 'Selected' : 'Select'}
                   </button>
+                  {#if file.dbId}
+                    <button class="delete-btn" on:click={() => deleteCsvFile(file.dbId)} disabled={isExtracting}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3,6 5,6 21,6"/>
+                        <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
+                    </button>
+                  {/if}
                 </div>
               </div>
             {/each}
@@ -1658,5 +1835,143 @@
       padding: 0.5rem 0.25rem;
       font-size: 0.8rem;
     }
+  }
+
+  /* Template Selector Styles */
+  .template-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #0f0f0f;
+    border-radius: 8px;
+    border: 1px solid #333333;
+  }
+
+  .template-selector label {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .template-selector select {
+    background: #1a1a1a;
+    color: #ffffff;
+    border: 1px solid #555555;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    min-width: 200px;
+  }
+
+  .template-selector select:focus {
+    outline: 2px solid #cb9f4d;
+    outline-offset: 2px;
+  }
+
+  .template-info-btn {
+    background: #333333;
+    color: #ffffff;
+    border: 1px solid #555555;
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .template-info-btn:hover {
+    background: #555555;
+    border-color: #777777;
+  }
+
+  .template-info {
+    background: #0f0f0f;
+    border: 1px solid #333333;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .template-info h4 {
+    color: #cb9f4d;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+  }
+
+  .template-info p {
+    color: #9a9a9a;
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+  }
+
+  .template-mappings h5 {
+    color: #ffffff;
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+  }
+
+  .mapping-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 0.5rem;
+  }
+
+  .mapping-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: #1a1a1a;
+    border-radius: 4px;
+    font-size: 0.8rem;
+  }
+
+  .field-key {
+    color: #cb9f4d;
+    font-weight: 600;
+    min-width: 80px;
+  }
+
+  .arrow {
+    color: #9a9a9a;
+  }
+
+  .header-name {
+    color: #ffffff;
+    flex: 1;
+  }
+
+  /* File Actions Styles */
+  .file-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .delete-btn {
+    background: #4a1a1a;
+    color: #ff6b6b;
+    border: 1px solid #ff6b6b;
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .delete-btn:hover {
+    background: #ff6b6b;
+    color: #ffffff;
+  }
+
+  .delete-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>
