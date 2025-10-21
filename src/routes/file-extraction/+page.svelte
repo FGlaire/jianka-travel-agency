@@ -540,7 +540,7 @@
       // Debug: Check for email duplicates specifically
       console.log('Email duplicate check:');
       const emailMap = new Map();
-      selectedFile.data.forEach((row, index) => {
+      selectedFile.data.forEach((row: any, index: number) => {
         if (row.email) {
           const normalizedEmail = row.email.toString().trim().toLowerCase();
           if (emailMap.has(normalizedEmail)) {
@@ -966,7 +966,7 @@
               <option value={template}>{template.template_name}</option>
             {/each}
           </select>
-          <button class="template-info-btn" on:click={() => showTemplateSelector = !showTemplateSelector}>
+          <button class="template-info-btn" on:click={() => showTemplateSelector = !showTemplateSelector} aria-label="Show template information">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <path d="M12 16v-4"/>
@@ -994,6 +994,8 @@
           </div>
         {/if}
       {/if}
+      
+      {#if showUploadArea}
         <div class="upload-area" class:uploading={isUploading}>
           <input
             bind:this={fileInput}
@@ -1069,7 +1071,7 @@
                     {selectedFile?.id === file.id ? 'Selected' : 'Select'}
                   </button>
                   {#if file.dbId}
-                    <button class="delete-btn" on:click={() => deleteCsvFile(file.dbId)} disabled={isExtracting}>
+                    <button class="delete-btn" on:click={() => deleteCsvFile(file.dbId!)} disabled={isExtracting} aria-label="Delete file">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="3,6 5,6 21,6"/>
                         <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"/>

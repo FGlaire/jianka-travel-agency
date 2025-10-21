@@ -19,7 +19,7 @@
     templateName: '',
     description: '',
     isPublic: false,
-    fieldMappings: {}
+    fieldMappings: {} as Record<string, string>
   };
 
   // Default field mappings
@@ -248,7 +248,7 @@
 				<div class="form-card">
 					<div class="form-header">
 						<h2>Create New Template</h2>
-						<button class="close-btn" on:click={() => showCreateForm = false}>
+						<button class="close-btn" on:click={() => showCreateForm = false} aria-label="Close form">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<line x1="18" y1="6" x2="6" y2="18"/>
 								<line x1="6" y1="6" x2="18" y2="18"/>
@@ -290,8 +290,8 @@
 						</div>
 
 						<div class="form-group">
-							<label>Field Mappings</label>
-							<div class="mappings-editor">
+							<label for="field-mappings">Field Mappings</label>
+							<div class="mappings-editor" id="field-mappings">
 								{#each Object.entries(defaultFieldMappings) as [fieldKey, defaultHeader]}
 									<div class="mapping-row">
 										<span class="field-key">{fieldKey}</span>
