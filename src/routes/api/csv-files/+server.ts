@@ -4,8 +4,11 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ locals }) => {
   try {
     console.log('GET /api/csv-files - Starting request');
-    const { data: { user } } = await locals.supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
+    const user = sessionData?.session?.user;
     
+    console.log('Session data:', sessionData);
+    console.log('Session error:', sessionError);
     console.log('User authentication result:', user ? 'Authenticated' : 'Not authenticated');
     
     if (!user) {
@@ -37,8 +40,11 @@ export const GET: RequestHandler = async ({ locals }) => {
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     console.log('POST /api/csv-files - Starting request');
-    const { data: { user } } = await locals.supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
+    const user = sessionData?.session?.user;
     
+    console.log('Session data:', sessionData);
+    console.log('Session error:', sessionError);
     console.log('User authentication result:', user ? 'Authenticated' : 'Not authenticated');
     
     if (!user) {
@@ -85,7 +91,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 export const DELETE: RequestHandler = async ({ request, locals }) => {
   try {
-    const { data: { user } } = await locals.supabase.auth.getUser();
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
+    const user = sessionData?.session?.user;
     
     if (!user) {
       return json({ error: 'Unauthorized' }, { status: 401 });
