@@ -139,7 +139,7 @@
     { key: 'dateOfBirth', name: 'Date of Birth', required: false, type: 'date' },
     { key: 'passportNumber', name: 'Passport Number', required: false, type: 'passport' },
     { key: 'nationality', name: 'Nationality', required: false, type: 'name' },
-    { key: 'address', name: 'Address', required: false, type: 'text' },
+    { key: 'address', name: 'Address', required: false, type: 'address' },
     { key: 'city', name: 'City', required: false, type: 'name' },
     { key: 'country', name: 'Country', required: false, type: 'name' },
     { key: 'postalCode', name: 'Postal Code', required: false, type: 'postal' },
@@ -152,7 +152,7 @@
     { key: 'specialRequests', name: 'Special Requests', required: false, type: 'text' },
     { key: 'travelExperience', name: 'Travel Experience', required: false, type: 'text' },
     { key: 'budget', name: 'Budget', required: false, type: 'number' },
-    { key: 'travelDates', name: 'Travel Dates', required: false, type: 'text' },
+    { key: 'travelDates', name: 'Travel Dates', required: false, type: 'dateRange' },
     { key: 'destination', name: 'Destination', required: false, type: 'name' },
     { key: 'accommodationType', name: 'Accommodation Type', required: false, type: 'text' },
     { key: 'transportation', name: 'Transportation', required: false, type: 'text' }
@@ -629,6 +629,14 @@
           if (value && field.type === 'text' && !isValidText(value, false)) {
             errors.push(`${field.name} must contain only letters, spaces, and basic punctuation (no emojis or special characters)`);
           }
+
+          if (value && field.type === 'address' && !isValidAddress(value)) {
+            errors.push(`${field.name} must contain only letters, numbers, spaces, and basic address characters (no emojis or special characters)`);
+          }
+
+          if (value && field.type === 'dateRange' && !isValidDateRange(value)) {
+            errors.push(`${field.name} must contain only letters, numbers, spaces, and date separators (no emojis or special characters)`);
+          }
         });
 
         validatedRow._errors = errors;
@@ -843,6 +851,36 @@
     
     // Must be at least 1 character
     return cleanName.length >= 1;
+  }
+
+  function isValidAddress(address: string): boolean {
+    if (!address || address.trim() === '') return true; // Address is optional
+    
+    const cleanAddress = address.trim();
+    
+    // Check for emojis
+    if (containsEmojis(cleanAddress)) return false;
+    
+    // Allow letters, numbers, spaces, hyphens, apostrophes, periods, commas, and common address characters
+    if (!/^[a-zA-Z0-9\s\-'.,#/]+$/.test(cleanAddress)) return false;
+    
+    // Must be at least 1 character
+    return cleanAddress.length >= 1;
+  }
+
+  function isValidDateRange(dateRange: string): boolean {
+    if (!dateRange || dateRange.trim() === '') return true; // Date range is optional
+    
+    const cleanDateRange = dateRange.trim();
+    
+    // Check for emojis
+    if (containsEmojis(cleanDateRange)) return false;
+    
+    // Allow letters, numbers, spaces, hyphens, forward slashes, and common date separators
+    if (!/^[a-zA-Z0-9\s\-\/.,:]+$/.test(cleanDateRange)) return false;
+    
+    // Must be at least 1 character
+    return cleanDateRange.length >= 1;
   }
 
   function validateColumns(headers: string[]): { isValid: boolean; errors: string[]; warnings: string[] } {

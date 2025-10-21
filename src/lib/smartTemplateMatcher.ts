@@ -2,7 +2,7 @@
 // Smart field detection and pattern-based template matching
 
 export interface FieldMapping {
-  type: 'text' | 'keyword' | 'date' | 'number' | 'boolean' | 'email' | 'phone' | 'passport' | 'postal';
+  type: 'text' | 'keyword' | 'date' | 'number' | 'boolean' | 'email' | 'phone' | 'passport' | 'postal' | 'address' | 'dateRange';
   analyzer?: string;
   normalizer?: string;
   format?: string;

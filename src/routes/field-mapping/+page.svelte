@@ -28,7 +28,7 @@
     "dateOfBirth": { type: 'date', required: false, format: 'yyyy-MM-dd', validation: [{ type: 'format', value: 'date', message: 'Invalid date format' }] },
     "passportNumber": { type: 'passport', required: false, validation: [{ type: 'regex', value: /^[A-Z0-9]{6,12}$/i, message: 'Passport must be 6-12 alphanumeric characters' }] },
     "nationality": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Nationality must contain only letters' }] },
-    "address": { type: 'text', required: false },
+    "address": { type: 'address', required: false },
     "city": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'City must contain only letters' }] },
     "country": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Country must contain only letters' }] },
     "postalCode": { type: 'postal', required: false, validation: [{ type: 'regex', value: /^\d+$/, message: 'Postal code must be numeric' }] },
@@ -41,7 +41,7 @@
     "specialRequests": { type: 'text', required: false },
     "travelExperience": { type: 'text', required: false },
     "budget": { type: 'number', required: false, validation: [{ type: 'range', value: { min: 0 }, message: 'Budget must be positive' }] },
-    "travelDates": { type: 'text', required: false },
+    "travelDates": { type: 'dateRange', required: false },
     "destination": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Destination must contain only letters' }] },
     "accommodationType": { type: 'text', required: false },
     "transportation": { type: 'text', required: false }
