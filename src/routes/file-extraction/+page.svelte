@@ -3,6 +3,7 @@
   import { fade, fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import { supabase } from '$lib/supabaseClient';
+  import { SmartTemplateMatcher, type EnhancedTemplate, processRuntimeFields } from '$lib/smartTemplateMatcher';
 
   // File upload state
   let fileInput: HTMLInputElement;
@@ -22,17 +23,13 @@
   }> = [];
 
   // Template state
-  let templates: Array<{
-    id: string;
-    template_name: string;
-    description: string;
-    field_mappings: any;
-    is_public: boolean;
-    is_default: boolean;
-    user_id: string;
-  }> = [];
-  let selectedTemplate: any = null;
+  let templates: EnhancedTemplate[] = [];
+  let enhancedTemplates: EnhancedTemplate[] = [];
+  let templateMatcher: SmartTemplateMatcher | null = null;
+  let selectedTemplate: EnhancedTemplate | null = null;
   let showTemplateSelector = false;
+  let templateMatches: any[] = [];
+  let showSmartMatching = false;
 
   // Extraction state
   let selectedFile: any = null;
@@ -259,8 +256,11 @@
       
       if (data.templates) {
         templates = data.templates;
+        // Enhance templates with smart matching capabilities
+        enhancedTemplates = templates.map(template => SmartTemplateMatcher.enhanceTemplate(template));
+        templateMatcher = new SmartTemplateMatcher(enhancedTemplates);
         // Set default template as selected
-        selectedTemplate = templates.find(t => t.is_default) || templates[0];
+        selectedTemplate = enhancedTemplates.find(t => t.is_default) || enhancedTemplates[0];
       }
     } catch (error) {
       console.error('Error loading templates:', error);
@@ -395,6 +395,20 @@
       const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim() !== '');
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      
+      // Smart template matching
+      if (templateMatcher && headers.length > 0) {
+        const sampleData = lines.slice(1, 3).map(line => 
+          line.split(',').map(v => v.trim().replace(/"/g, ''))
+        );
+        templateMatches = templateMatcher.analyzeCSVHeaders(headers, sampleData);
+        
+        // Auto-select best matching template if confidence is high
+        if (templateMatches.length > 0 && templateMatches[0].confidence === 'high') {
+          selectedTemplate = templateMatches[0].template;
+          showSmartMatching = true;
+        }
+      }
       
       // Validate column order and structure
       const columnValidation = validateColumns(headers);
@@ -982,15 +996,48 @@
             <div class="template-mappings">
               <h5>Field Mappings:</h5>
               <div class="mapping-grid">
-                {#each Object.entries(selectedTemplate?.field_mappings || {}) as [fieldKey, headerName]}
+                {#each Object.entries(selectedTemplate?.field_mappings || {}) as [fieldKey, fieldMapping]}
                   <div class="mapping-item">
                     <span class="field-key">{fieldKey}</span>
+                    <span class="field-type">{fieldMapping.type}</span>
                     <span class="arrow">→</span>
-                    <span class="header-name">{headerName}</span>
+                    <span class="header-name">{fieldMapping.required ? '*' : ''}{fieldKey}</span>
                   </div>
                 {/each}
               </div>
             </div>
+          </div>
+        {/if}
+
+        <!-- Smart Template Matching Results -->
+        {#if showSmartMatching && templateMatches.length > 0}
+          <div class="smart-matching-section">
+            <h4>🎯 Smart Template Matching</h4>
+            <p>We found {templateMatches.length} template(s) that match your CSV structure:</p>
+            <div class="template-matches">
+              {#each templateMatches.slice(0, 3) as match}
+                <div class="template-match" class:selected={selectedTemplate?.id === match.template.id}>
+                  <div class="match-header">
+                    <h5>{match.template.template_name}</h5>
+                    <div class="match-score">
+                      <span class="score-badge" class:high={match.confidence === 'high'} class:medium={match.confidence === 'medium'} class:low={match.confidence === 'low'}>
+                        {Math.round(match.score * 100)}% match
+                      </span>
+                    </div>
+                  </div>
+                  <p class="match-description">{match.template.description}</p>
+                  <div class="matched-fields">
+                    <strong>Matched fields:</strong> {match.matchedFields.join(', ')}
+                  </div>
+                  <button class="use-template-btn" on:click={() => selectedTemplate = match.template}>
+                    {selectedTemplate?.id === match.template.id ? 'Selected' : 'Use This Template'}
+                  </button>
+                </div>
+              {/each}
+            </div>
+            <button class="dismiss-smart-btn" on:click={() => showSmartMatching = false}>
+              Dismiss
+            </button>
           </div>
         {/if}
       {/if}
@@ -1975,5 +2022,129 @@
   .delete-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  /* Smart Template Matching Styles */
+  .smart-matching-section {
+    background: #0f0f0f;
+    border: 1px solid #333333;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .smart-matching-section h4 {
+    color: #cb9f4d;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+  }
+
+  .smart-matching-section p {
+    color: #9a9a9a;
+    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+  }
+
+  .template-matches {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .template-match {
+    background: #1a1a1a;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    padding: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .template-match:hover {
+    border-color: #cb9f4d;
+  }
+
+  .template-match.selected {
+    border-color: #cb9f4d;
+    background: #2a2a2a;
+  }
+
+  .match-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .match-header h5 {
+    color: #ffffff;
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .score-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .score-badge.high {
+    background: #1a4d1a;
+    color: #4ade80;
+  }
+
+  .score-badge.medium {
+    background: #4a3a1a;
+    color: #fbbf24;
+  }
+
+  .score-badge.low {
+    background: #4a1a1a;
+    color: #ff6b6b;
+  }
+
+  .match-description {
+    color: #9a9a9a;
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem 0;
+  }
+
+  .matched-fields {
+    color: #ffffff;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .use-template-btn {
+    background: #cb9f4d;
+    color: #000000;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+  }
+
+  .use-template-btn:hover {
+    background: #f4d03f;
+  }
+
+  .dismiss-smart-btn {
+    background: #333333;
+    color: #ffffff;
+    border: 1px solid #555555;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.8rem;
+  }
+
+  .dismiss-smart-btn:hover {
+    background: #555555;
   }
 </style>

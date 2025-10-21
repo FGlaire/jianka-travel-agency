@@ -2,53 +2,49 @@
   import { onMount } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
+  import { SmartTemplateMatcher, type EnhancedTemplate, type FieldMapping, RUNTIME_FIELDS, processRuntimeFields } from '$lib/smartTemplateMatcher';
 
   // Template state
-  let templates: Array<{
-    id: string;
-    template_name: string;
-    description: string;
-    field_mappings: any;
-    is_public: boolean;
-    is_default: boolean;
-    user_id: string;
-  }> = [];
+  let templates: EnhancedTemplate[] = [];
+  let enhancedTemplates: EnhancedTemplate[] = [];
+  let templateMatcher: SmartTemplateMatcher | null = null;
 
   let showCreateForm = false;
   let newTemplate = {
     templateName: '',
     description: '',
     isPublic: false,
-    fieldMappings: {} as Record<string, string>
+    fieldMappings: {} as Record<string, FieldMapping>,
+    runtimeFields: [] as string[]
   };
 
-  // Default field mappings
-  const defaultFieldMappings = {
-    "id": "ID",
-    "lastName": "Last Name", 
-    "firstName": "First Name",
-    "email": "Email",
-    "phone": "Phone",
-    "dateOfBirth": "Date of Birth",
-    "passportNumber": "Passport Number",
-    "nationality": "Nationality",
-    "address": "Address",
-    "city": "City",
-    "country": "Country",
-    "postalCode": "Postal Code",
-    "emergencyContact": "Emergency Contact",
-    "emergencyPhone": "Emergency Phone",
-    "dietaryRequirements": "Dietary Requirements",
-    "medicalConditions": "Medical Conditions",
-    "travelInsurance": "Travel Insurance",
-    "preferredLanguage": "Preferred Language",
-    "specialRequests": "Special Requests",
-    "travelExperience": "Travel Experience",
-    "budget": "Budget",
-    "travelDates": "Travel Dates",
-    "destination": "Destination",
-    "accommodationType": "Accommodation Type",
-    "transportation": "Transportation"
+  // Enhanced field mappings with types and validation
+  const defaultFieldMappings: Record<string, FieldMapping> = {
+    "id": { type: 'number', required: true, validation: [{ type: 'regex', value: /^\d+$/, message: 'ID must be numeric' }] },
+    "lastName": { type: 'text', required: true, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Last name must contain only letters' }] },
+    "firstName": { type: 'text', required: true, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'First name must contain only letters' }] },
+    "email": { type: 'email', required: true, validation: [{ type: 'regex', value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email format' }] },
+    "phone": { type: 'phone', required: false, validation: [{ type: 'regex', value: /^[\+]?[\d\s\-\(\)]{7,}$/, message: 'Invalid phone format' }] },
+    "dateOfBirth": { type: 'date', required: false, format: 'yyyy-MM-dd', validation: [{ type: 'format', value: 'date', message: 'Invalid date format' }] },
+    "passportNumber": { type: 'passport', required: false, validation: [{ type: 'regex', value: /^[A-Z0-9]{6,12}$/i, message: 'Passport must be 6-12 alphanumeric characters' }] },
+    "nationality": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Nationality must contain only letters' }] },
+    "address": { type: 'text', required: false },
+    "city": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'City must contain only letters' }] },
+    "country": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Country must contain only letters' }] },
+    "postalCode": { type: 'postal', required: false, validation: [{ type: 'regex', value: /^\d+$/, message: 'Postal code must be numeric' }] },
+    "emergencyContact": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Emergency contact must contain only letters' }] },
+    "emergencyPhone": { type: 'phone', required: false, validation: [{ type: 'regex', value: /^[\+]?[\d\s\-\(\)]{7,}$/, message: 'Invalid phone format' }] },
+    "dietaryRequirements": { type: 'text', required: false },
+    "medicalConditions": { type: 'text', required: false },
+    "travelInsurance": { type: 'boolean', required: false },
+    "preferredLanguage": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Language must contain only letters' }] },
+    "specialRequests": { type: 'text', required: false },
+    "travelExperience": { type: 'text', required: false },
+    "budget": { type: 'number', required: false, validation: [{ type: 'range', value: { min: 0 }, message: 'Budget must be positive' }] },
+    "travelDates": { type: 'text', required: false },
+    "destination": { type: 'text', required: false, validation: [{ type: 'regex', value: /^[a-zA-Z\s\-']+$/, message: 'Destination must contain only letters' }] },
+    "accommodationType": { type: 'text', required: false },
+    "transportation": { type: 'text', required: false }
   };
 
   onMount(() => {
@@ -62,6 +58,9 @@
       
       if (data.templates) {
         templates = data.templates;
+        // Enhance templates with smart matching capabilities
+        enhancedTemplates = data.templates.map(template => SmartTemplateMatcher.enhanceTemplate(template));
+        templateMatcher = new SmartTemplateMatcher(enhancedTemplates);
       }
     } catch (error) {
       console.error('Error loading templates:', error);
@@ -84,6 +83,7 @@
           templateName: newTemplate.templateName,
           description: newTemplate.description,
           fieldMappings: newTemplate.fieldMappings,
+          runtimeFields: newTemplate.runtimeFields,
           isPublic: newTemplate.isPublic
         })
       });
@@ -135,7 +135,8 @@
       templateName: '',
       description: '',
       isPublic: false,
-      fieldMappings: { ...defaultFieldMappings }
+      fieldMappings: { ...defaultFieldMappings },
+      runtimeFields: []
     };
   }
 
@@ -197,11 +198,12 @@
 							<div class="template-mappings">
 								<h4>Field Mappings:</h4>
 								<div class="mapping-preview">
-									{#each Object.entries(template.field_mappings).slice(0, 5) as [fieldKey, headerName]}
+									{#each Object.entries(template.field_mappings).slice(0, 5) as [fieldKey, fieldMapping]}
 										<div class="mapping-item">
 											<span class="field-key">{fieldKey}</span>
+											<span class="field-type">{fieldMapping.type}</span>
 											<span class="arrow">→</span>
-											<span class="header-name">{headerName}</span>
+											<span class="header-name">{fieldMapping.required ? '*' : ''}{fieldKey}</span>
 										</div>
 									{/each}
 									{#if Object.keys(template.field_mappings).length > 5}
@@ -290,16 +292,45 @@
 						</div>
 
 						<div class="form-group">
+							<label for="runtime-fields">Runtime Fields</label>
+							<div class="runtime-fields-editor" id="runtime-fields">
+								<p class="runtime-description">Select computed fields that will be generated automatically:</p>
+								{#each Object.entries(RUNTIME_FIELDS) as [fieldKey, fieldDef]}
+									<div class="runtime-field-row">
+										<label class="runtime-checkbox-label">
+											<input 
+												type="checkbox" 
+												bind:group={newTemplate.runtimeFields}
+												value={fieldKey}
+											/>
+											<span class="checkmark"></span>
+											<div class="runtime-field-info">
+												<span class="runtime-field-name">{fieldDef.name}</span>
+												<span class="runtime-field-desc">{fieldDef.description}</span>
+											</div>
+										</label>
+									</div>
+								{/each}
+							</div>
+						</div>
+
+						<div class="form-group">
 							<label for="field-mappings">Field Mappings</label>
 							<div class="mappings-editor" id="field-mappings">
-								{#each Object.entries(defaultFieldMappings) as [fieldKey, defaultHeader]}
+								{#each Object.entries(defaultFieldMappings) as [fieldKey, fieldMapping]}
 									<div class="mapping-row">
-										<span class="field-key">{fieldKey}</span>
+										<div class="field-info">
+											<span class="field-key">{fieldKey}</span>
+											<span class="field-type">{fieldMapping.type}</span>
+											{#if fieldMapping.required}
+												<span class="required-badge">Required</span>
+											{/if}
+										</div>
 										<span class="arrow">→</span>
 										<input 
 											type="text" 
-											bind:value={newTemplate.fieldMappings[fieldKey]}
-											placeholder={defaultHeader}
+											bind:value={newTemplate.fieldMappings[fieldKey]?.headerName || fieldKey}
+											placeholder={fieldKey}
 											class="header-input"
 										/>
 									</div>
@@ -516,6 +547,26 @@
 		min-width: 80px;
 	}
 
+	.field-type {
+		background: #e3f2fd;
+		color: #1976d2;
+		padding: 0.2rem 0.5rem;
+		border-radius: 12px;
+		font-size: 0.7rem;
+		font-weight: 600;
+		margin-left: 0.5rem;
+	}
+
+	.required-badge {
+		background: #ffebee;
+		color: #c62828;
+		padding: 0.2rem 0.5rem;
+		border-radius: 12px;
+		font-size: 0.7rem;
+		font-weight: 600;
+		margin-left: 0.5rem;
+	}
+
 	.arrow {
 		color: #999;
 	}
@@ -693,10 +744,70 @@
 		border: 1px solid #e0e0e0;
 	}
 
+	.field-info {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 200px;
+	}
+
 	.mapping-row .field-key {
-		min-width: 120px;
+		min-width: 80px;
 		font-weight: 600;
 		color: #cb9f4d;
+		font-size: 0.8rem;
+	}
+
+	/* Runtime Fields Styles */
+	.runtime-fields-editor {
+		border: 1px solid #e0e0e0;
+		border-radius: 6px;
+		padding: 1rem;
+		background: #f8f9fa;
+	}
+
+	.runtime-description {
+		color: #666;
+		font-size: 0.9rem;
+		margin: 0 0 1rem 0;
+	}
+
+	.runtime-field-row {
+		margin-bottom: 0.75rem;
+		padding: 0.75rem;
+		background: white;
+		border-radius: 6px;
+		border: 1px solid #e0e0e0;
+	}
+
+	.runtime-checkbox-label {
+		display: flex !important;
+		align-items: center;
+		gap: 0.75rem;
+		cursor: pointer;
+		font-weight: normal !important;
+		margin: 0 !important;
+	}
+
+	.runtime-checkbox-label input[type="checkbox"] {
+		width: auto !important;
+		margin: 0;
+	}
+
+	.runtime-field-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.runtime-field-name {
+		font-weight: 600;
+		color: #2c2c2c;
+		font-size: 0.9rem;
+	}
+
+	.runtime-field-desc {
+		color: #666;
 		font-size: 0.8rem;
 	}
 
