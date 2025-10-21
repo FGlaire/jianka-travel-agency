@@ -18,6 +18,9 @@ export const GET: RequestHandler = async ({ locals, request }) => {
     
     const user = sessionData?.session?.user || userData?.user;
     console.log('Selected user:', user ? 'Found' : 'Not found');
+    console.log('Session user:', sessionData?.session?.user);
+    console.log('GetUser user:', userData?.user);
+    console.log('Final user object:', user);
     
     if (!user) {
       console.log('No user found, returning 401');
@@ -27,7 +30,10 @@ export const GET: RequestHandler = async ({ locals, request }) => {
           sessionData: !!sessionData,
           sessionError,
           userData: !!userData,
-          userError
+          userError,
+          sessionUser: sessionData?.session?.user,
+          getUserUser: userData?.user,
+          finalUser: user
         }
       }, { status: 401 });
     }
@@ -85,6 +91,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     
     const user = sessionData?.session?.user || userData?.user;
     console.log('Selected user:', user ? 'Found' : 'Not found');
+    console.log('Session user:', sessionData?.session?.user);
+    console.log('GetUser user:', userData?.user);
+    console.log('Final user object:', user);
     
     if (!user) {
       console.log('No user found, returning 401');
@@ -94,7 +103,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
           sessionData: !!sessionData,
           sessionError,
           userData: !!userData,
-          userError
+          userError,
+          sessionUser: sessionData?.session?.user,
+          getUserUser: userData?.user,
+          finalUser: user
         }
       }, { status: 401 });
     }
