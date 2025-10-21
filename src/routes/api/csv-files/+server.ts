@@ -17,6 +17,21 @@ export const GET: RequestHandler = async ({ locals }) => {
     }
 
     console.log('Fetching CSV files for user:', user.id);
+    
+    // First check if the table exists
+    const { data: tableCheck, error: tableError } = await locals.supabase
+      .from('csv_files')
+      .select('count')
+      .limit(1);
+    
+    if (tableError) {
+      console.error('Table check error:', tableError);
+      if (tableError.code === 'PGRST116') {
+        return json({ error: 'Database table not found. Please run the database schema setup.', details: tableError }, { status: 500 });
+      }
+      return json({ error: 'Database error', details: tableError }, { status: 500 });
+    }
+    
     // Get user's CSV files
     const { data: csvFiles, error } = await locals.supabase
       .from('csv_files')
@@ -26,14 +41,14 @@ export const GET: RequestHandler = async ({ locals }) => {
 
     if (error) {
       console.error('Error fetching CSV files:', error);
-      return json({ error: 'Failed to fetch CSV files' }, { status: 500 });
+      return json({ error: 'Failed to fetch CSV files', details: error }, { status: 500 });
     }
 
     console.log('Found CSV files:', csvFiles?.length || 0);
     return json({ csvFiles });
   } catch (error) {
     console.error('Error in GET /api/csv-files:', error);
-    return json({ error: 'Internal server error' }, { status: 500 });
+    return json({ error: 'Internal server error', details: error }, { status: 500 });
   }
 };
 
@@ -61,6 +76,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // First check if the table exists
+    const { data: tableCheck, error: tableError } = await locals.supabase
+      .from('csv_files')
+      .select('count')
+      .limit(1);
+    
+    if (tableError) {
+      console.error('Table check error:', tableError);
+      if (tableError.code === 'PGRST116') {
+        return json({ error: 'Database table not found. Please run the database schema setup.', details: tableError }, { status: 500 });
+      }
+      return json({ error: 'Database error', details: tableError }, { status: 500 });
+    }
+
     // Insert CSV file into database
     const { data: csvFile, error } = await locals.supabase
       .from('csv_files')
@@ -78,14 +107,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     if (error) {
       console.error('Error saving CSV file:', error);
-      return json({ error: 'Failed to save CSV file' }, { status: 500 });
+      return json({ error: 'Failed to save CSV file', details: error }, { status: 500 });
     }
 
     console.log('CSV file saved successfully:', csvFile.id);
     return json({ csvFile });
   } catch (error) {
     console.error('Error in POST /api/csv-files:', error);
-    return json({ error: 'Internal server error' }, { status: 500 });
+    return json({ error: 'Internal server error', details: error }, { status: 500 });
   }
 };
 
