@@ -1,19 +1,35 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ locals }) => {
+export const GET: RequestHandler = async ({ locals, request }) => {
   try {
     console.log('GET /api/csv-files - Starting request');
-    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
-    const user = sessionData?.session?.user;
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     
+    // Try multiple authentication methods
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
     console.log('Session data:', sessionData);
     console.log('Session error:', sessionError);
-    console.log('User authentication result:', user ? 'Authenticated' : 'Not authenticated');
+    
+    // Also try getUser as fallback
+    const { data: userData, error: userError } = await locals.supabase.auth.getUser();
+    console.log('User data:', userData);
+    console.log('User error:', userError);
+    
+    const user = sessionData?.session?.user || userData?.user;
+    console.log('Selected user:', user ? 'Found' : 'Not found');
     
     if (!user) {
       console.log('No user found, returning 401');
-      return json({ error: 'Unauthorized' }, { status: 401 });
+      return json({ 
+        error: 'Unauthorized', 
+        debug: {
+          sessionData: !!sessionData,
+          sessionError,
+          userData: !!userData,
+          userError
+        }
+      }, { status: 401 });
     }
 
     console.log('Fetching CSV files for user:', user.id);
@@ -55,16 +71,32 @@ export const GET: RequestHandler = async ({ locals }) => {
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     console.log('POST /api/csv-files - Starting request');
-    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
-    const user = sessionData?.session?.user;
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     
+    // Try multiple authentication methods
+    const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
     console.log('Session data:', sessionData);
     console.log('Session error:', sessionError);
-    console.log('User authentication result:', user ? 'Authenticated' : 'Not authenticated');
+    
+    // Also try getUser as fallback
+    const { data: userData, error: userError } = await locals.supabase.auth.getUser();
+    console.log('User data:', userData);
+    console.log('User error:', userError);
+    
+    const user = sessionData?.session?.user || userData?.user;
+    console.log('Selected user:', user ? 'Found' : 'Not found');
     
     if (!user) {
       console.log('No user found, returning 401');
-      return json({ error: 'Unauthorized' }, { status: 401 });
+      return json({ 
+        error: 'Unauthorized', 
+        debug: {
+          sessionData: !!sessionData,
+          sessionError,
+          userData: !!userData,
+          userError
+        }
+      }, { status: 401 });
     }
 
     const body = await request.json();
