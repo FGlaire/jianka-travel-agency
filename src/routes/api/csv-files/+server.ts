@@ -16,7 +16,18 @@ export const GET: RequestHandler = async ({ locals, request }) => {
     console.log('User data:', userData);
     console.log('User error:', userError);
     
-    const user = sessionData?.session?.user || userData?.user;
+    // Try to get user from session token directly
+    let user = sessionData?.session?.user || userData?.user;
+    
+    // If user is still null, try to refresh the session
+    if (!user && sessionData?.session) {
+      console.log('User is null, trying to refresh session...');
+      const { data: refreshData, error: refreshError } = await locals.supabase.auth.refreshSession();
+      console.log('Refresh data:', refreshData);
+      console.log('Refresh error:', refreshError);
+      user = refreshData?.session?.user || user;
+    }
+    
     console.log('Selected user:', user ? 'Found' : 'Not found');
     console.log('Session user:', sessionData?.session?.user);
     console.log('GetUser user:', userData?.user);
@@ -89,7 +100,18 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     console.log('User data:', userData);
     console.log('User error:', userError);
     
-    const user = sessionData?.session?.user || userData?.user;
+    // Try to get user from session token directly
+    let user = sessionData?.session?.user || userData?.user;
+    
+    // If user is still null, try to refresh the session
+    if (!user && sessionData?.session) {
+      console.log('User is null, trying to refresh session...');
+      const { data: refreshData, error: refreshError } = await locals.supabase.auth.refreshSession();
+      console.log('Refresh data:', refreshData);
+      console.log('Refresh error:', refreshError);
+      user = refreshData?.session?.user || user;
+    }
+    
     console.log('Selected user:', user ? 'Found' : 'Not found');
     console.log('Session user:', sessionData?.session?.user);
     console.log('GetUser user:', userData?.user);
