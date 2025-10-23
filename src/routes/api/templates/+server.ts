@@ -3,12 +3,23 @@ import type { RequestHandler } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ locals }) => {
   try {
+    console.log('🔄 GET /api/templates - Starting request');
+    
     const { data: sessionData, error: sessionError } = await locals.supabase.auth.getSession();
+    console.log('📡 Session data:', { 
+      hasSession: !!sessionData?.session, 
+      hasUser: !!sessionData?.session?.user,
+      sessionError: sessionError?.message 
+    });
+    
     const user = sessionData?.session?.user;
     
     if (!user) {
+      console.log('❌ No user found, returning 401');
       return json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log('✅ User authenticated:', user.id);
 
     // Get user's templates and public templates
     const { data: templates, error } = await locals.supabase
@@ -18,13 +29,14 @@ export const GET: RequestHandler = async ({ locals }) => {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching templates:', error);
+      console.error('❌ Error fetching templates:', error);
       return json({ error: 'Failed to fetch templates' }, { status: 500 });
     }
 
-    return json({ templates });
+    console.log('✅ Templates fetched:', templates?.length || 0);
+    return json({ templates: templates || [] });
   } catch (error) {
-    console.error('Error in GET /api/templates:', error);
+    console.error('❌ Error in GET /api/templates:', error);
     return json({ error: 'Internal server error' }, { status: 500 });
   }
 };

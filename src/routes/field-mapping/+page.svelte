@@ -61,17 +61,31 @@
 
   async function loadTemplates() {
     try {
+      console.log('🔄 Loading templates...');
       const response = await fetch('/api/templates');
+      console.log('📡 Templates API response status:', response.status);
+      
+      if (!response.ok) {
+        console.error('❌ Templates API error:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('❌ Error details:', errorText);
+        return;
+      }
+      
       const data = await response.json();
+      console.log('📊 Templates data:', data);
       
       if (data.templates) {
         templates = data.templates;
+        console.log('✅ Templates loaded:', templates.length);
         // Enhance templates with smart matching capabilities
         enhancedTemplates = data.templates.map((template: any) => SmartTemplateMatcher.enhanceTemplate(template));
         templateMatcher = new SmartTemplateMatcher(enhancedTemplates);
+      } else {
+        console.log('⚠️ No templates in response');
       }
     } catch (error) {
-      console.error('Error loading templates:', error);
+      console.error('❌ Error loading templates:', error);
     }
   }
 
@@ -156,6 +170,17 @@
   function startCreateTemplate() {
     resetForm();
     showCreateForm = true;
+    
+    // Scroll to the form after a short delay to ensure it's rendered
+    setTimeout(() => {
+      const formElement = document.querySelector('.create-form-section');
+      if (formElement) {
+        formElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
   }
 
   // Drag & Drop functions
@@ -714,6 +739,10 @@
 		color: #000000;
 		font-size: 1rem;
 		padding: 1rem 2rem;
+		margin: 0 auto;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.templates-grid {
@@ -884,6 +913,10 @@
 		border-radius: 12px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 		border: 1px solid #e0e0e0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.empty-state svg {
