@@ -25,6 +25,9 @@
   let showColumnInput = false;
   let columnInput = '';
   let validationErrors: string[] = [];
+  
+  // Force reactivity for input fields
+  let inputUpdateTrigger = 0;
 
   // Enhanced field mappings with types and validation
   const defaultFieldMappings: Record<string, FieldMapping> = {
@@ -165,6 +168,7 @@
     validationErrors = [];
     draggedField = null;
     draggedOverField = null;
+    inputUpdateTrigger = 0;
   }
 
   function startCreateTemplate() {
@@ -242,8 +246,13 @@
           target: targetMapping
         });
         
-        // Trigger reactivity
+        // Force reactivity by creating a completely new object
         newTemplate.fieldMappings = { ...newTemplate.fieldMappings };
+        
+        // Trigger input field updates by incrementing the trigger
+        inputUpdateTrigger++;
+        console.log('🔄 Input update trigger:', inputUpdateTrigger);
+        
         console.log('✅ Field mappings updated, triggering reactivity');
       } else {
         console.log('❌ Missing mappings:', { draggedMapping, targetMapping });
@@ -331,6 +340,8 @@
   }
 
   function getFieldDisplayValue(fieldKey: string): string {
+    // Force reactivity by referencing the trigger
+    inputUpdateTrigger;
     const mapping = newTemplate.fieldMappings[fieldKey];
     if (!mapping || !mapping.headerName) {
       return fieldKey;
@@ -596,6 +607,7 @@
 										<input 
 											type="text" 
 											value={getFieldDisplayValue(fieldKey)}
+											data-field={fieldKey}
 											on:input={(e) => {
 												const target = e.target as HTMLInputElement;
 												if (!newTemplate.fieldMappings[fieldKey]) {
