@@ -18,6 +18,14 @@
     runtimeFields: [] as string[]
   };
 
+  // Drag & Drop state
+  let draggedField: string | null = null;
+  let draggedOverField: string | null = null;
+  let csvColumns: string[] = [];
+  let showColumnInput = false;
+  let columnInput = '';
+  let validationErrors: string[] = [];
+
   // Enhanced field mappings with types and validation
   const defaultFieldMappings: Record<string, FieldMapping> = {
     "id": { type: 'number', required: true, validation: [{ type: 'regex', value: /^\d+$/, message: 'ID must be numeric' }] },
@@ -138,11 +146,132 @@
       fieldMappings: { ...defaultFieldMappings },
       runtimeFields: []
     };
+    csvColumns = [];
+    columnInput = '';
+    validationErrors = [];
+    draggedField = null;
+    draggedOverField = null;
   }
 
   function startCreateTemplate() {
     resetForm();
     showCreateForm = true;
+  }
+
+  // Drag & Drop functions
+  function handleDragStart(event: DragEvent, fieldKey: string) {
+    draggedField = fieldKey;
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', fieldKey);
+    }
+  }
+
+  function handleDragOver(event: DragEvent, fieldKey: string) {
+    event.preventDefault();
+    draggedOverField = fieldKey;
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  function handleDragLeave(event: DragEvent) {
+    draggedOverField = null;
+  }
+
+  function handleDrop(event: DragEvent, fieldKey: string) {
+    event.preventDefault();
+    
+    if (draggedField && draggedField !== fieldKey) {
+      // Swap the mappings
+      const draggedMapping = newTemplate.fieldMappings[draggedField];
+      const targetMapping = newTemplate.fieldMappings[fieldKey];
+      
+      if (draggedMapping && targetMapping) {
+        // Swap headerName values
+        const tempHeaderName = draggedMapping.headerName;
+        draggedMapping.headerName = targetMapping.headerName;
+        targetMapping.headerName = tempHeaderName;
+        
+        // Trigger reactivity
+        newTemplate.fieldMappings = { ...newTemplate.fieldMappings };
+      }
+    }
+    
+    draggedField = null;
+    draggedOverField = null;
+    validateMappings();
+  }
+
+  function handleDragEnd() {
+    draggedField = null;
+    draggedOverField = null;
+  }
+
+  // Column input functions
+  function addCsvColumns() {
+    if (!columnInput.trim()) return;
+    
+    const columns = columnInput.split(',').map(col => col.trim()).filter(col => col);
+    csvColumns = [...csvColumns, ...columns];
+    columnInput = '';
+    validateMappings();
+  }
+
+  function removeCsvColumn(index: number) {
+    csvColumns = csvColumns.filter((_, i) => i !== index);
+    validateMappings();
+  }
+
+  function generateNumberedColumns() {
+    csvColumns = Array.from({ length: 25 }, (_, i) => `Column ${i + 1}`);
+    validateMappings();
+  }
+
+  // Validation functions
+  function validateMappings() {
+    validationErrors = [];
+    const usedHeaders = new Set<string>();
+    const usedNumbers = new Set<number>();
+    
+    Object.entries(newTemplate.fieldMappings).forEach(([fieldKey, mapping]) => {
+      if (!mapping.headerName) return;
+      
+      const headerName = mapping.headerName.trim();
+      
+      // Check for duplicates
+      if (usedHeaders.has(headerName)) {
+        validationErrors.push(`Duplicate mapping: "${headerName}" is used multiple times`);
+      } else {
+        usedHeaders.add(headerName);
+      }
+      
+      // Check if it's a number (1-25)
+      const numberMatch = headerName.match(/^(\d+)$/);
+      if (numberMatch) {
+        const num = parseInt(numberMatch[1]);
+        if (num < 1 || num > 25) {
+          validationErrors.push(`Column number ${num} is out of range (1-25)`);
+        } else if (usedNumbers.has(num)) {
+          validationErrors.push(`Duplicate column number: ${num} is used multiple times`);
+        } else {
+          usedNumbers.add(num);
+        }
+      }
+      
+      // Check if it matches a CSV column
+      if (csvColumns.length > 0 && !csvColumns.includes(headerName) && !numberMatch) {
+        validationErrors.push(`"${headerName}" is not in the CSV columns list`);
+      }
+    });
+  }
+
+  function getFieldDisplayValue(fieldKey: string): string {
+    const mapping = newTemplate.fieldMappings[fieldKey];
+    if (!mapping || !mapping.headerName) {
+      return fieldKey;
+    }
+    return mapping.headerName;
   }
 </script>
 
@@ -165,7 +294,7 @@
 				Share templates with your team or keep them private for your specific use cases.
 			</p>
 		</div>
-
+		
 		<!-- Templates Section -->
 		<div class="templates-section" transition:fade={{ duration: 600, delay: 200 }}>
 			<div class="section-header">
@@ -178,7 +307,7 @@
 					Create New Template
 				</button>
 			</div>
-
+			
 			{#if templates.length > 0}
 				<div class="templates-grid">
 					{#each templates as template, index}
@@ -314,12 +443,64 @@
 							</div>
 						</div>
 
+						<!-- CSV Columns Setup -->
+						<div class="form-group">
+							<label for="csv-columns">CSV Columns Setup</label>
+							<div class="csv-columns-section">
+								<div class="column-input-row">
+									<input 
+										type="text" 
+										bind:value={columnInput}
+										placeholder="Enter column names separated by commas (e.g., ID, Name, Email)"
+										class="column-input"
+										on:keydown={(e) => e.key === 'Enter' && addCsvColumns()}
+									/>
+									<button type="button" class="add-column-btn" on:click={addCsvColumns}>
+										Add Columns
+									</button>
+									<button type="button" class="generate-numbers-btn" on:click={generateNumberedColumns}>
+										Use Numbers 1-25
+									</button>
+			</div>
+			
+								{#if csvColumns.length > 0}
+									<div class="csv-columns-list">
+										<h4>Available Columns:</h4>
+										<div class="columns-grid">
+											{#each csvColumns as column, index}
+												<div class="column-tag">
+													{column}
+													<button type="button" class="remove-column-btn" on:click={() => removeCsvColumn(index)}>
+														×
+													</button>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+			</div>
+		</div>
+		
+						<!-- Field Mappings with Drag & Drop -->
 						<div class="form-group">
 							<label for="field-mappings">Field Mappings</label>
 							<div class="mappings-editor" id="field-mappings">
 								{#each Object.entries(defaultFieldMappings) as [fieldKey, fieldMapping]}
-									<div class="mapping-row">
+									<div 
+										class="mapping-row" 
+										class:dragging={draggedField === fieldKey}
+										class:drag-over={draggedOverField === fieldKey}
+										draggable="true"
+										role="button"
+										tabindex="0"
+										on:dragstart={(e) => handleDragStart(e, fieldKey)}
+										on:dragover={(e) => handleDragOver(e, fieldKey)}
+										on:dragleave={handleDragLeave}
+										on:drop={(e) => handleDrop(e, fieldKey)}
+										on:dragend={handleDragEnd}
+									>
 										<div class="field-info">
+											<span class="drag-handle">⋮⋮</span>
 											<span class="field-key">{fieldKey}</span>
 											<span class="field-type">{fieldMapping.type}</span>
 											{#if fieldMapping.required}
@@ -329,27 +510,45 @@
 										<span class="arrow">→</span>
 										<input 
 											type="text" 
-											value={newTemplate.fieldMappings[fieldKey]?.headerName || fieldKey}
+											value={getFieldDisplayValue(fieldKey)}
 											on:input={(e) => {
 												const target = e.target as HTMLInputElement;
 												if (!newTemplate.fieldMappings[fieldKey]) {
 													newTemplate.fieldMappings[fieldKey] = { ...fieldMapping };
 												}
 												newTemplate.fieldMappings[fieldKey].headerName = target.value;
+												validateMappings();
 											}}
-											placeholder={fieldKey}
+											placeholder="Enter column name or number (1-25)"
 											class="header-input"
 										/>
 									</div>
 								{/each}
 							</div>
+							
+							<!-- Validation Errors -->
+							{#if validationErrors.length > 0}
+								<div class="validation-errors">
+									<h4>Validation Errors:</h4>
+									{#each validationErrors as error}
+										<div class="error-item">
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+												<circle cx="12" cy="12" r="10"/>
+												<line x1="15" y1="9" x2="9" y2="15"/>
+												<line x1="9" y1="9" x2="15" y2="15"/>
+											</svg>
+											{error}
+										</div>
+									{/each}
+								</div>
+							{/if}
 						</div>
 
 						<div class="form-actions">
 							<button type="button" class="cancel-btn" on:click={() => showCreateForm = false}>
 								Cancel
 							</button>
-							<button type="submit" class="submit-btn">
+							<button type="submit" class="submit-btn" disabled={validationErrors.length > 0}>
 								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 									<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
 									<polyline points="17,21 17,13 7,13 7,21"/>
@@ -360,7 +559,7 @@
 						</div>
 					</form>
 				</div>
-			</div>
+		</div>
 		{/if}
 	</div>
 </div>
@@ -413,7 +612,7 @@
 	.templates-section {
 		margin-bottom: 3rem;
 	}
-
+	
 	.section-header {
 		display: flex;
 		align-items: center;
@@ -873,6 +1072,166 @@
 		transform: translateY(-2px);
 	}
 
+	.submit-btn:disabled {
+		background: #ccc;
+		color: #666;
+		cursor: not-allowed;
+		transform: none;
+	}
+
+	/* CSV Columns Section */
+	.csv-columns-section {
+		border: 1px solid #e0e0e0;
+		border-radius: 6px;
+		padding: 1rem;
+		background: #f8f9fa;
+	}
+
+	.column-input-row {
+		display: flex;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.column-input {
+		flex: 1;
+		min-width: 200px;
+		margin: 0 !important;
+		padding: 0.5rem !important;
+		font-size: 0.9rem !important;
+	}
+
+	.add-column-btn,
+	.generate-numbers-btn {
+		background: #cb9f4d;
+		color: #000000;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 4px;
+		font-size: 0.8rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		white-space: nowrap;
+	}
+
+	.add-column-btn:hover,
+	.generate-numbers-btn:hover {
+		background: #f4d03f;
+	}
+
+	.csv-columns-list {
+		margin-top: 1rem;
+	}
+
+	.csv-columns-list h4 {
+		color: #2c2c2c;
+		font-size: 0.9rem;
+		font-weight: 600;
+		margin: 0 0 0.5rem 0;
+	}
+
+	.columns-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.column-tag {
+		background: #e3f2fd;
+		color: #1976d2;
+		padding: 0.25rem 0.75rem;
+		border-radius: 12px;
+		font-size: 0.8rem;
+		font-weight: 600;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.remove-column-btn {
+		background: none;
+		border: none;
+		color: #1976d2;
+		cursor: pointer;
+		font-size: 1.2rem;
+		font-weight: bold;
+		padding: 0;
+		line-height: 1;
+	}
+
+	.remove-column-btn:hover {
+		color: #c62828;
+	}
+
+	/* Drag & Drop Styles */
+	.mapping-row {
+		cursor: move;
+		transition: all 0.3s ease;
+	}
+
+	.mapping-row:hover {
+		background: #f0f8ff;
+		border-color: #cb9f4d;
+	}
+
+	.mapping-row.dragging {
+		opacity: 0.5;
+		transform: rotate(2deg);
+	}
+
+	.mapping-row.drag-over {
+		background: #e3f2fd;
+		border-color: #1976d2;
+		transform: scale(1.02);
+	}
+
+	.drag-handle {
+		color: #999;
+		font-size: 1.2rem;
+		cursor: grab;
+		margin-right: 0.5rem;
+		user-select: none;
+	}
+
+	.drag-handle:active {
+		cursor: grabbing;
+	}
+
+	/* Validation Errors */
+	.validation-errors {
+		margin-top: 1rem;
+		padding: 1rem;
+		background: #ffebee;
+		border: 1px solid #ffcdd2;
+		border-radius: 6px;
+	}
+
+	.validation-errors h4 {
+		color: #c62828;
+		font-size: 0.9rem;
+		font-weight: 600;
+		margin: 0 0 0.75rem 0;
+	}
+
+	.error-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: #c62828;
+		font-size: 0.8rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.error-item:last-child {
+		margin-bottom: 0;
+	}
+
+	.error-item svg {
+		flex-shrink: 0;
+	}
+	
 	@media (max-width: 768px) {
 		.page-container {
 			padding: 1rem;
