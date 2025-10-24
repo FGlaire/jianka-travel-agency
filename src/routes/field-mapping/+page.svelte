@@ -48,6 +48,11 @@
     validationErrors
   };
 
+  // Ensure field mappings are initialized
+  $: if (showCreateForm && Object.keys(newTemplate.fieldMappings).length === 0) {
+    newTemplate.fieldMappings = { ...defaultFieldMappings };
+  }
+
   // Enhanced field mappings with types and validation
   const defaultFieldMappings: Record<string, FieldMapping> = {
     "id": { type: 'number', required: true, validation: [{ type: 'regex', value: /^\d+$/, message: 'ID must be numeric' }] },
@@ -268,6 +273,9 @@
       console.log('Input update trigger:', inputUpdateTrigger);
       
       console.log('Field mapping updated:', { fieldKey, headerName: draggedColumn });
+      
+      // Force a re-render by updating the template object
+      newTemplate = { ...newTemplate };
     } else {
       console.log('No column dragged');
     }
@@ -362,11 +370,11 @@
   }
 
   function getFieldDisplayValue(fieldKey: string): string {
-    // Force reactivity by referencing the trigger
+    // Force reactivity by referencing the trigger and the current mappings
     inputUpdateTrigger;
     const mapping = newTemplate.fieldMappings[fieldKey];
     if (!mapping || !mapping.headerName) {
-      return fieldKey;
+      return '';
     }
     return mapping.headerName;
   }
@@ -644,7 +652,7 @@
 										<span class="arrow">→</span>
 										<input 
 											type="text" 
-											value={getFieldDisplayValue(fieldKey)}
+											value={newTemplate.fieldMappings[fieldKey]?.headerName || ''}
 											data-field={fieldKey}
 											class="header-input"
 											class:drag-over={draggedOverInput === fieldKey}
