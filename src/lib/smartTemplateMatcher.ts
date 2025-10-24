@@ -268,8 +268,18 @@ export class SmartTemplateMatcher {
         : mapping as FieldMapping;
       
       const normalizedKey = key.toLowerCase().replace(/[_\s-]/g, '');
+      
+      // Check if the CSV header matches the field key name
       if (normalizedName === normalizedKey) {
         return fieldMapping;
+      }
+      
+      // Check if the CSV header matches the mapped headerName (for custom column mappings)
+      if (fieldMapping.headerName) {
+        const normalizedHeaderName = fieldMapping.headerName.toLowerCase().replace(/[_\s-]/g, '');
+        if (normalizedName === normalizedHeaderName) {
+          return fieldMapping;
+        }
       }
     }
     

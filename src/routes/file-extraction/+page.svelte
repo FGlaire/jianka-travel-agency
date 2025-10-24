@@ -1065,7 +1065,7 @@
                     <span class="field-key">{fieldKey}</span>
                     <span class="field-type">{fieldMapping.type}</span>
                     <span class="arrow">→</span>
-                    <span class="header-name">{fieldMapping.required ? '*' : ''}{fieldKey}</span>
+                    <span class="header-name">{fieldMapping.required ? '*' : ''}{fieldMapping.headerName || fieldKey}</span>
                   </div>
                 {/each}
               </div>
