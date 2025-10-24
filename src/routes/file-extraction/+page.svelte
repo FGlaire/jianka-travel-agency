@@ -166,11 +166,22 @@
     if (selectedTemplate && selectedTemplate.field_mappings) {
       // Use template field mappings
       const templateMappings = selectedTemplate.field_mappings;
+      console.log('🔍 Mapping header:', header, 'with template:', selectedTemplate.template_name);
+      console.log('📋 Template mappings:', templateMappings);
+      
       for (const [fieldKey, fieldMapping] of Object.entries(templateMappings)) {
-        if (fieldMapping.headerName === header || fieldKey === header) {
+        // Check if the CSV header matches the mapped column name
+        if (fieldMapping.headerName && fieldMapping.headerName === header) {
+          console.log('✅ Found mapping:', header, '→', fieldKey, '(via headerName)');
+          return fieldKey;
+        }
+        // Also check if the CSV header matches the field key name (for backward compatibility)
+        if (fieldKey === header) {
+          console.log('✅ Found mapping:', header, '→', fieldKey, '(via fieldKey)');
           return fieldKey;
         }
       }
+      console.log('❌ No template mapping found for:', header);
     }
     
     // Fallback to default mapping
@@ -202,7 +213,9 @@
       'Transportation': 'transportation'
     };
     
-    return headerMap[header] || header.toLowerCase().replace(/\s+/g, '');
+    const result = headerMap[header] || header.toLowerCase().replace(/\s+/g, '');
+    console.log('🔄 Using fallback mapping:', header, '→', result);
+    return result;
   }
 
   onMount(() => {
