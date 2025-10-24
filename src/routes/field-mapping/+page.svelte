@@ -48,10 +48,7 @@
     validationErrors
   };
 
-  // Ensure field mappings are initialized
-  $: if (showCreateForm && Object.keys(newTemplate.fieldMappings).length === 0) {
-    newTemplate.fieldMappings = { ...defaultFieldMappings };
-  }
+  // Field mappings are now initialized in resetForm() function
 
   // Enhanced field mappings with types and validation
   const defaultFieldMappings: Record<string, FieldMapping> = {
@@ -147,6 +144,8 @@
       const data = await response.json();
       
       if (data.template) {
+        console.log('✅ Template created successfully:', data.template);
+        console.log('📊 Field mappings saved:', data.template.field_mappings);
         templates = [...templates, data.template];
         resetForm();
         showCreateForm = false;
@@ -187,11 +186,17 @@
   }
 
   function resetForm() {
+    // Initialize with empty headerName values
+    const initializedMappings: Record<string, FieldMapping> = {};
+    Object.entries(defaultFieldMappings).forEach(([key, mapping]) => {
+      initializedMappings[key] = { ...mapping, headerName: '' };
+    });
+    
     newTemplate = {
       templateName: '',
       description: '',
       isPublic: false,
-      fieldMappings: {},
+      fieldMappings: initializedMappings,
       runtimeFields: []
     };
     csvColumns = [];
@@ -270,25 +275,21 @@
     if (draggedColumn) {
       console.log('Setting column to input:', { draggedColumn, fieldKey });
       
-      // Initialize mapping if it doesn't exist
+      // Ensure the mapping exists
       if (!newTemplate.fieldMappings[fieldKey]) {
         newTemplate.fieldMappings[fieldKey] = { ...defaultFieldMappings[fieldKey] };
       }
       
-      // Set the headerName to the dragged column
+      // Update the headerName
       newTemplate.fieldMappings[fieldKey].headerName = draggedColumn;
       
-      // Force reactivity by creating a completely new object
-      newTemplate.fieldMappings = { ...newTemplate.fieldMappings };
-      
-      // Trigger input field updates by incrementing the trigger
-      inputUpdateTrigger++;
-      console.log('Input update trigger:', inputUpdateTrigger);
+      // Force reactivity by updating the entire template object
+      newTemplate = { ...newTemplate };
       
       console.log('Field mapping updated:', { fieldKey, headerName: draggedColumn });
+      console.log('Updated fieldMappings:', newTemplate.fieldMappings);
       
-      // Force a re-render by updating the template object
-      newTemplate = { ...newTemplate };
+      validateMappings();
     } else {
       console.log('No column dragged');
     }
@@ -296,7 +297,6 @@
     draggedColumn = null;
     draggedOverInput = null;
     console.log('Reset drag state');
-    validateMappings();
   }
 
   function handleColumnDragEnd() {
@@ -450,7 +450,7 @@
 											<span class="field-key">{fieldKey}</span>
 											<span class="field-type">{fieldMapping.type}</span>
 											<span class="arrow">→</span>
-											<span class="header-name">{fieldMapping.required ? '*' : ''}{fieldKey}</span>
+											<span class="header-name">{fieldMapping.required ? '*' : ''}{fieldMapping.headerName || fieldKey}</span>
 										</div>
 									{/each}
 									{#if Object.keys(template.field_mappings).length > 5}
