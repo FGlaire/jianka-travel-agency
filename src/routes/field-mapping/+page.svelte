@@ -19,15 +19,34 @@
   };
 
   // Drag & Drop state
-  let draggedField: string | null = null;
-  let draggedOverField: string | null = null;
+  let draggedColumn: string | null = null;
+  let draggedOverInput: string | null = null;
   let csvColumns: string[] = [];
   let showColumnInput = false;
   let columnInput = '';
   let validationErrors: string[] = [];
   
+  // Debug state
+  let showDebugPanel = false;
+  let debugInfo = {
+    draggedColumn: null as string | null,
+    draggedOverInput: null as string | null,
+    csvColumns: [] as string[],
+    fieldMappings: {} as Record<string, any>,
+    validationErrors: [] as string[]
+  };
+
   // Force reactivity for input fields
   let inputUpdateTrigger = 0;
+
+  // Update debug info whenever state changes
+  $: debugInfo = {
+    draggedColumn,
+    draggedOverInput,
+    csvColumns,
+    fieldMappings: newTemplate.fieldMappings,
+    validationErrors
+  };
 
   // Enhanced field mappings with types and validation
   const defaultFieldMappings: Record<string, FieldMapping> = {
@@ -166,8 +185,8 @@
     csvColumns = [];
     columnInput = '';
     validationErrors = [];
-    draggedField = null;
-    draggedOverField = null;
+    draggedColumn = null;
+    draggedOverInput = null;
     inputUpdateTrigger = 0;
   }
 
@@ -181,96 +200,88 @@
       if (formElement) {
         formElement.scrollIntoView({ 
           behavior: 'smooth', 
-          block: 'start' 
+          block: 'start',
+          inline: 'nearest'
+        });
+      } else {
+        // Fallback: scroll to bottom of page
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: 'smooth'
         });
       }
-    }, 100);
+    }, 200);
   }
 
-  // Drag & Drop functions
-  function handleDragStart(event: DragEvent, fieldKey: string) {
-    console.log('🎯 DRAG START:', { fieldKey, event });
-    draggedField = fieldKey;
+  // Drag & Drop functions for CSV columns to input fields
+  function handleColumnDragStart(event: DragEvent, column: string) {
+    console.log('COLUMN DRAG START:', { column, event });
+    draggedColumn = column;
     if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', fieldKey);
-      console.log('📋 DataTransfer set:', fieldKey);
+      event.dataTransfer.effectAllowed = 'copy';
+      event.dataTransfer.setData('text/plain', column);
+      console.log('DataTransfer set:', column);
     }
   }
 
-  function handleDragOver(event: DragEvent, fieldKey: string) {
+  function handleInputDragOver(event: DragEvent, fieldKey: string) {
     event.preventDefault();
-    console.log('🎯 DRAG OVER:', { fieldKey, draggedField, event });
-    draggedOverField = fieldKey;
+    console.log('INPUT DRAG OVER:', { fieldKey, draggedColumn, event });
+    draggedOverInput = fieldKey;
     if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move';
-      console.log('📋 DropEffect set to move');
+      event.dataTransfer.dropEffect = 'copy';
+      console.log('DropEffect set to copy');
     }
   }
 
-  function handleDragLeave(event: DragEvent) {
-    console.log('🎯 DRAG LEAVE:', { draggedOverField, event });
-    draggedOverField = null;
+  function handleInputDragLeave(event: DragEvent) {
+    console.log('INPUT DRAG LEAVE:', { draggedOverInput, event });
+    draggedOverInput = null;
   }
 
-  function handleDrop(event: DragEvent, fieldKey: string) {
+  function handleInputDrop(event: DragEvent, fieldKey: string) {
     event.preventDefault();
-    console.log('🎯 DROP EVENT:', { 
+    console.log('INPUT DROP EVENT:', { 
       fieldKey, 
-      draggedField, 
-      draggedOverField, 
+      draggedColumn, 
+      draggedOverInput, 
       event,
       dataTransfer: event.dataTransfer?.getData('text/plain')
     });
     
-    if (draggedField && draggedField !== fieldKey) {
-      console.log('🔄 Attempting to swap mappings:', { draggedField, targetField: fieldKey });
+    if (draggedColumn) {
+      console.log('Setting column to input:', { draggedColumn, fieldKey });
       
-      // Swap the mappings
-      const draggedMapping = newTemplate.fieldMappings[draggedField];
-      const targetMapping = newTemplate.fieldMappings[fieldKey];
-      
-      console.log('📊 Mappings before swap:', {
-        dragged: draggedMapping,
-        target: targetMapping
-      });
-      
-      if (draggedMapping && targetMapping) {
-        // Swap headerName values
-        const tempHeaderName = draggedMapping.headerName;
-        draggedMapping.headerName = targetMapping.headerName;
-        targetMapping.headerName = tempHeaderName;
-        
-        console.log('🔄 Mappings after swap:', {
-          dragged: draggedMapping,
-          target: targetMapping
-        });
-        
-        // Force reactivity by creating a completely new object
-        newTemplate.fieldMappings = { ...newTemplate.fieldMappings };
-        
-        // Trigger input field updates by incrementing the trigger
-        inputUpdateTrigger++;
-        console.log('🔄 Input update trigger:', inputUpdateTrigger);
-        
-        console.log('✅ Field mappings updated, triggering reactivity');
-      } else {
-        console.log('❌ Missing mappings:', { draggedMapping, targetMapping });
+      // Initialize mapping if it doesn't exist
+      if (!newTemplate.fieldMappings[fieldKey]) {
+        newTemplate.fieldMappings[fieldKey] = { ...defaultFieldMappings[fieldKey] };
       }
+      
+      // Set the headerName to the dragged column
+      newTemplate.fieldMappings[fieldKey].headerName = draggedColumn;
+      
+      // Force reactivity by creating a completely new object
+      newTemplate.fieldMappings = { ...newTemplate.fieldMappings };
+      
+      // Trigger input field updates by incrementing the trigger
+      inputUpdateTrigger++;
+      console.log('Input update trigger:', inputUpdateTrigger);
+      
+      console.log('Field mapping updated:', { fieldKey, headerName: draggedColumn });
     } else {
-      console.log('⚠️ No swap needed:', { draggedField, fieldKey, sameField: draggedField === fieldKey });
+      console.log('No column dragged');
     }
     
-    draggedField = null;
-    draggedOverField = null;
-    console.log('🧹 Reset drag state');
+    draggedColumn = null;
+    draggedOverInput = null;
+    console.log('Reset drag state');
     validateMappings();
   }
 
-  function handleDragEnd() {
-    console.log('🎯 DRAG END:', { draggedField, draggedOverField });
-    draggedField = null;
-    draggedOverField = null;
+  function handleColumnDragEnd() {
+    console.log('COLUMN DRAG END:', { draggedColumn, draggedOverInput });
+    draggedColumn = null;
+    draggedOverInput = null;
   }
 
   // Column input functions
@@ -295,7 +306,7 @@
 
   // Validation functions
   function validateMappings() {
-    console.log('🔍 VALIDATING MAPPINGS:', newTemplate.fieldMappings);
+    console.log('VALIDATING MAPPINGS:', newTemplate.fieldMappings);
     validationErrors = [];
     const usedHeaders = new Set<string>();
     const usedNumbers = new Set<number>();
@@ -304,6 +315,12 @@
       if (!mapping.headerName) return;
       
       const headerName = mapping.headerName.trim();
+      
+      // Check for empty values
+      if (!headerName) {
+        validationErrors.push(`Field "${fieldKey}" cannot be empty`);
+        return;
+      }
       
       // Check for duplicates
       if (usedHeaders.has(headerName)) {
@@ -317,7 +334,7 @@
       if (numberMatch) {
         const num = parseInt(numberMatch[1]);
         if (num < 1 || num > 25) {
-          validationErrors.push(`Column number ${num} is out of range (1-25)`);
+          validationErrors.push(`Column number ${num} is out of range (must be 1-25)`);
         } else if (usedNumbers.has(num)) {
           validationErrors.push(`Duplicate column number: ${num} is used multiple times`);
         } else {
@@ -327,11 +344,16 @@
       
       // Check if it matches a CSV column
       if (csvColumns.length > 0 && !csvColumns.includes(headerName) && !numberMatch) {
-        validationErrors.push(`"${headerName}" is not in the CSV columns list`);
+        validationErrors.push(`"${headerName}" is not in the CSV columns list. Available columns: ${csvColumns.join(', ')}`);
+      }
+      
+      // Check for invalid characters in column names
+      if (!numberMatch && !/^[a-zA-Z0-9\s\-_]+$/.test(headerName)) {
+        validationErrors.push(`"${headerName}" contains invalid characters. Only letters, numbers, spaces, hyphens, and underscores are allowed`);
       }
     });
     
-    console.log('✅ VALIDATION COMPLETE:', { 
+    console.log('VALIDATION COMPLETE:', { 
       errors: validationErrors.length, 
       errorsList: validationErrors,
       usedHeaders: Array.from(usedHeaders),
@@ -520,23 +542,44 @@
 
 						<!-- Debug Panel -->
 						<div class="debug-panel">
-							<h4>🐛 Debug Info</h4>
-							<div class="debug-info">
-								<div><strong>Dragged Field:</strong> {draggedField || 'None'}</div>
-								<div><strong>Drag Over Field:</strong> {draggedOverField || 'None'}</div>
-								<div><strong>CSV Columns:</strong> {csvColumns.length} columns</div>
-								<div><strong>Validation Errors:</strong> {validationErrors.length} errors</div>
-								<div><strong>Field Mappings Count:</strong> {Object.keys(newTemplate.fieldMappings).length}</div>
+							<div class="debug-header">
+								<h4>Debug Information</h4>
+								<button class="debug-toggle-btn" on:click={() => showDebugPanel = !showDebugPanel}>
+									{showDebugPanel ? 'Hide' : 'Show'} Debug
+								</button>
 							</div>
-							<button type="button" class="debug-btn" on:click={() => console.log('🔍 FULL DEBUG STATE:', {
-								draggedField,
-								draggedOverField,
-								csvColumns,
-								validationErrors,
-								fieldMappings: newTemplate.fieldMappings
-							})}>
-								Log Full State to Console
-							</button>
+							
+							{#if showDebugPanel}
+								<div class="debug-info">
+									<div><strong>Dragged Column:</strong> {debugInfo.draggedColumn || 'None'}</div>
+									<div><strong>Drag Over Input:</strong> {debugInfo.draggedOverInput || 'None'}</div>
+									<div><strong>CSV Columns:</strong> {debugInfo.csvColumns.length} ({debugInfo.csvColumns.join(', ')})</div>
+									<div><strong>Field Mappings:</strong> {Object.keys(debugInfo.fieldMappings).length}</div>
+									<div><strong>Validation Errors:</strong> {debugInfo.validationErrors.length}</div>
+									<div><strong>Input Update Trigger:</strong> {inputUpdateTrigger}</div>
+								</div>
+								<div class="debug-actions">
+									<button type="button" class="debug-btn" on:click={() => {
+										console.log('=== FULL DEBUG STATE ===');
+										console.log('Debug Info:', debugInfo);
+										console.log('All Field Mappings:', newTemplate.fieldMappings);
+										console.log('Validation Errors:', validationErrors);
+										console.log('CSV Columns:', csvColumns);
+										console.log('========================');
+									}}>
+										Log Full State to Console
+									</button>
+									<button type="button" class="debug-btn" on:click={() => {
+										console.log('=== DRAG & DROP STATE ===');
+										console.log('Dragged Column:', draggedColumn);
+										console.log('Dragged Over Input:', draggedOverInput);
+										console.log('CSV Columns Available:', csvColumns);
+										console.log('========================');
+									}}>
+										Log Drag & Drop State
+									</button>
+								</div>
+							{/if}
 						</div>
 
 						<!-- CSV Columns Setup -->
@@ -561,10 +604,18 @@
 			
 								{#if csvColumns.length > 0}
 									<div class="csv-columns-list">
-										<h4>Available Columns:</h4>
+										<h4>Available Columns (drag to field inputs):</h4>
 										<div class="columns-grid">
 											{#each csvColumns as column, index}
-												<div class="column-tag">
+												<div 
+													class="column-tag" 
+													class:dragging={draggedColumn === column}
+													draggable="true"
+													role="button"
+													tabindex="0"
+													on:dragstart={(e) => handleColumnDragStart(e, column)}
+													on:dragend={handleColumnDragEnd}
+												>
 													{column}
 													<button type="button" class="remove-column-btn" on:click={() => removeCsvColumn(index)}>
 														×
@@ -582,21 +633,8 @@
 							<label for="field-mappings">Field Mappings</label>
 							<div class="mappings-editor" id="field-mappings">
 								{#each Object.entries(defaultFieldMappings) as [fieldKey, fieldMapping]}
-									<div 
-										class="mapping-row" 
-										class:dragging={draggedField === fieldKey}
-										class:drag-over={draggedOverField === fieldKey}
-										draggable="true"
-										role="button"
-										tabindex="0"
-										on:dragstart={(e) => handleDragStart(e, fieldKey)}
-										on:dragover={(e) => handleDragOver(e, fieldKey)}
-										on:dragleave={handleDragLeave}
-										on:drop={(e) => handleDrop(e, fieldKey)}
-										on:dragend={handleDragEnd}
-									>
+									<div class="mapping-row">
 										<div class="field-info">
-											<span class="drag-handle">⋮⋮</span>
 											<span class="field-key">{fieldKey}</span>
 											<span class="field-type">{fieldMapping.type}</span>
 											{#if fieldMapping.required}
@@ -608,6 +646,8 @@
 											type="text" 
 											value={getFieldDisplayValue(fieldKey)}
 											data-field={fieldKey}
+											class="header-input"
+											class:drag-over={draggedOverInput === fieldKey}
 											on:input={(e) => {
 												const target = e.target as HTMLInputElement;
 												if (!newTemplate.fieldMappings[fieldKey]) {
@@ -616,8 +656,10 @@
 												newTemplate.fieldMappings[fieldKey].headerName = target.value;
 												validateMappings();
 											}}
+											on:dragover={(e) => handleInputDragOver(e, fieldKey)}
+											on:dragleave={handleInputDragLeave}
+											on:drop={(e) => handleInputDrop(e, fieldKey)}
 											placeholder="Enter column name or number (1-25)"
-											class="header-input"
 										/>
 									</div>
 								{/each}
@@ -755,6 +797,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		width: fit-content;
 	}
 
 	.templates-grid {
@@ -1272,7 +1315,6 @@
 
 	/* Drag & Drop Styles */
 	.mapping-row {
-		cursor: move;
 		transition: all 0.3s ease;
 	}
 
@@ -1281,26 +1323,32 @@
 		border-color: #cb9f4d;
 	}
 
-	.mapping-row.dragging {
+	.header-input.drag-over {
+		background: #e3f2fd;
+		border-color: #1976d2;
+		transform: scale(1.02);
+		box-shadow: 0 0 10px rgba(25, 118, 210, 0.3);
+	}
+
+	.column-tag {
+		cursor: grab;
+		transition: all 0.3s ease;
+		user-select: none;
+	}
+
+	.column-tag:hover {
+		background: #1976d2;
+		color: white;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+	}
+
+	.column-tag.dragging {
 		opacity: 0.5;
 		transform: rotate(2deg);
 	}
 
-	.mapping-row.drag-over {
-		background: #e3f2fd;
-		border-color: #1976d2;
-		transform: scale(1.02);
-	}
-
-	.drag-handle {
-		color: #999;
-		font-size: 1.2rem;
-		cursor: grab;
-		margin-right: 0.5rem;
-		user-select: none;
-	}
-
-	.drag-handle:active {
+	.column-tag:active {
 		cursor: grabbing;
 	}
 
@@ -1346,11 +1394,34 @@
 		margin-bottom: 1.5rem;
 	}
 
-	.debug-panel h4 {
+	.debug-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0.75rem;
+	}
+
+	.debug-header h4 {
 		color: #1976d2;
 		font-size: 0.9rem;
 		font-weight: 600;
-		margin: 0 0 0.75rem 0;
+		margin: 0;
+	}
+
+	.debug-toggle-btn {
+		background: #1976d2;
+		color: white;
+		border: none;
+		padding: 0.25rem 0.75rem;
+		border-radius: 4px;
+		font-size: 0.8rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+	}
+
+	.debug-toggle-btn:hover {
+		background: #1565c0;
 	}
 
 	.debug-info {
@@ -1366,6 +1437,12 @@
 		padding: 0.5rem;
 		border-radius: 4px;
 		border: 1px solid #e3f2fd;
+	}
+
+	.debug-actions {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
 	}
 
 	.debug-btn {
