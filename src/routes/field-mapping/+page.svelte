@@ -122,6 +122,13 @@
       return;
     }
 
+    // Validate mappings before creating template
+    validateMappings();
+    if (validationErrors.length > 0) {
+      alert(`Cannot create template. Please fix the following errors:\n\n${validationErrors.join('\n')}`);
+      return;
+    }
+
     try {
       const response = await fetch('/api/templates', {
         method: 'POST',
@@ -184,7 +191,7 @@
       templateName: '',
       description: '',
       isPublic: false,
-      fieldMappings: { ...defaultFieldMappings },
+      fieldMappings: {},
       runtimeFields: []
     };
     csvColumns = [];
@@ -193,6 +200,7 @@
     draggedColumn = null;
     draggedOverInput = null;
     inputUpdateTrigger = 0;
+    showDebugPanel = false;
   }
 
   function startCreateTemplate() {
@@ -216,6 +224,11 @@
         });
       }
     }, 200);
+  }
+
+  function closeCreateForm() {
+    resetForm();
+    showCreateForm = false;
   }
 
   // Drag & Drop functions for CSV columns to input fields
@@ -332,7 +345,7 @@
       
       // Check for duplicates
       if (usedHeaders.has(headerName)) {
-        validationErrors.push(`Duplicate mapping: "${headerName}" is used multiple times`);
+        validationErrors.push(`Duplicate column mapping: "${headerName}" is mapped to multiple fields`);
       } else {
         usedHeaders.add(headerName);
       }
@@ -484,7 +497,7 @@
 				<div class="form-card">
 					<div class="form-header">
 						<h2>Create New Template</h2>
-						<button class="close-btn" on:click={() => showCreateForm = false} aria-label="Close form">
+						<button class="close-btn" on:click={closeCreateForm} aria-label="Close form">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 								<line x1="18" y1="6" x2="6" y2="18"/>
 								<line x1="6" y1="6" x2="18" y2="18"/>
@@ -692,7 +705,7 @@
 						</div>
 
 						<div class="form-actions">
-							<button type="button" class="cancel-btn" on:click={() => showCreateForm = false}>
+							<button type="button" class="cancel-btn" on:click={closeCreateForm}>
 								Cancel
 							</button>
 							<button type="submit" class="submit-btn" disabled={validationErrors.length > 0}>
