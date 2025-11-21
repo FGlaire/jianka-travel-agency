@@ -47,9 +47,27 @@
   let enhancedTemplates: EnhancedTemplate[] = [];
   let templateMatcher: SmartTemplateMatcher | null = null;
   let selectedTemplate: EnhancedTemplate | null = null;
+  let previousSelectedTemplateId: string | null = null; // Track template changes
   let showTemplateSelector = false;
   let templateMatches: any[] = [];
   let showSmartMatching = false;
+  
+  // Reactive statement to handle template changes and re-parse files
+  $: {
+    if (selectedTemplate && selectedTemplate.id !== previousSelectedTemplateId) {
+      // Template changed - re-parse files if we have any
+      if (uploadedFiles.length > 0 && previousSelectedTemplateId !== null) {
+        console.log('🔄 Template changed reactively - re-parsing all files...');
+        reparseAllFilesWithTemplate(selectedTemplate).catch(error => {
+          console.error('Error re-parsing files on template change:', error);
+        });
+      }
+      previousSelectedTemplateId = selectedTemplate.id;
+    } else if (!selectedTemplate && previousSelectedTemplateId !== null) {
+      // Template was cleared
+      previousSelectedTemplateId = null;
+    }
+  }
 
   // Extraction state
   let selectedFile: any = null;
@@ -239,8 +257,13 @@
   $: {
     try {
       const newOrderedFields = getOrderedFields(selectedTemplate);
+      const newOrder = newOrderedFields.map(f => f.key).join(',');
+      const currentOrder = orderedFields.map(f => f.key).join(',');
+      
       // Only update if actually different to prevent unnecessary re-renders
-      if (JSON.stringify(newOrderedFields.map(f => f.key)) !== JSON.stringify(orderedFields.map(f => f.key))) {
+      if (newOrder !== currentOrder) {
+        console.log('🔄 Updating column order for template:', selectedTemplate?.template_name || 'None');
+        console.log('📋 New order:', newOrder);
         orderedFields = newOrderedFields;
       }
     } catch (error) {
@@ -1119,13 +1142,39 @@
       uploadedFiles = uploadedFiles.map(file => {
         if (file.rawText) {
           filesReparsed++;
-          return reparseFileWithTemplate(file, template);
+          const reparsedFile = reparseFileWithTemplate(file, template);
+          // Update template ID
+          reparsedFile.templateId = template.id;
+          return reparsedFile;
         } else {
           filesSkipped++;
           console.warn(`⚠️ File "${file.name}" cannot be re-parsed: raw CSV text not available. Please re-upload this file to use a different template.`);
           return file;
         }
       });
+      
+      // Recalculate template matches for all files with the new template
+      if (templateMatcher && uploadedFiles.length > 0) {
+        console.log('🔄 Recalculating template matches...');
+        const allHeaders = uploadedFiles
+          .filter(f => f.columns && f.columns.length > 0)
+          .map(f => f.columns);
+        
+        if (allHeaders.length > 0) {
+          // Use the first file's headers for matching (or combine all)
+          const sampleHeaders = allHeaders[0];
+          const sampleData = uploadedFiles[0]?.data?.slice(0, 3).map((row: any) => 
+            Object.values(row).slice(0, sampleHeaders.length)
+          ) || [];
+          
+          templateMatches = templateMatcher.analyzeCSVHeaders(sampleHeaders, sampleData);
+          console.log('📊 Updated template matches:', templateMatches.map(m => ({
+            name: m.template.template_name,
+            score: Math.round(m.score * 100) + '%',
+            confidence: m.confidence
+          })));
+        }
+      }
       
       // Show user-friendly message if some files couldn't be re-parsed
       if (filesSkipped > 0) {
@@ -1528,12 +1577,18 @@
               }
               
               // Re-parse all files with new template if files are already uploaded
-              if (uploadedFiles.length > 0 && previousTemplate && previousTemplate.id !== template.id) {
-                console.log('🔄 Template changed - re-parsing all files...');
-                await reparseAllFilesWithTemplate(template);
-              } else if (uploadedFiles.length > 0 && !previousTemplate) {
-                // First template selection with existing files
-                await reparseAllFilesWithTemplate(template);
+              // Always re-parse if we have files and the template actually changed
+              if (uploadedFiles.length > 0) {
+                if (previousTemplate && previousTemplate.id !== template.id) {
+                  console.log('🔄 Template changed from', previousTemplate.template_name, 'to', template.template_name, '- re-parsing all files...');
+                  await reparseAllFilesWithTemplate(template);
+                } else if (!previousTemplate) {
+                  // First template selection with existing files
+                  console.log('🔄 First template selection with existing files - re-parsing...');
+                  await reparseAllFilesWithTemplate(template);
+                } else {
+                  console.log('⚠️ Template selection did not change, skipping re-parse');
+                }
               }
             }
             showTemplateSelector = false;
@@ -1606,7 +1661,15 @@
                   <div class="matched-fields">
                     <strong>Matched fields:</strong> {match.matchedFields.join(', ')}
                   </div>
-                  <button class="use-template-btn" on:click={() => selectedTemplate = match.template}>
+                  <button class="use-template-btn" on:click={async () => {
+                    const previousTemplate = selectedTemplate;
+                    selectedTemplate = match.template;
+                    // Re-parse files if we have uploaded files
+                    if (uploadedFiles.length > 0) {
+                      console.log('🔄 Template changed via smart matching - re-parsing all files...');
+                      await reparseAllFilesWithTemplate(match.template);
+                    }
+                  }}>
                     {selectedTemplate?.id === match.template.id ? 'Selected' : 'Use This Template'}
                   </button>
                 </div>
