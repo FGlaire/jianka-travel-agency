@@ -180,6 +180,59 @@
 
   // Expected column order for validation
   const expectedColumns = travelFields.map(field => field.key);
+  
+  /**
+   * Get ordered fields based on template column mappings
+   * Returns fields in the order defined by the template's column positions
+   */
+  function getOrderedFields(template: EnhancedTemplate | null): typeof travelFields {
+    if (!template || !template.field_mappings) {
+      return travelFields; // Return default order if no template
+    }
+    
+    // Check if template has custom column position mappings
+    let hasCustomColumnMappings = false;
+    const fieldToColumnMap = new Map<string, number>(); // fieldKey -> columnIndex
+    
+    for (const [fieldKey, fieldMapping] of Object.entries(template.field_mappings)) {
+      if (fieldMapping && fieldMapping.headerName && fieldMapping.headerName.trim()) {
+        const headerName = fieldMapping.headerName.trim();
+        
+        // Check if it's a column position (Column X or number)
+        const columnMatch = headerName.match(/^Column\s+(\d+)$/i) || headerName.match(/^(\d+)$/);
+        if (columnMatch) {
+          hasCustomColumnMappings = true;
+          const columnNumber = parseInt(columnMatch[1]);
+          const columnIndex = columnNumber - 1; // Convert to 0-indexed
+          fieldToColumnMap.set(fieldKey, columnIndex);
+        }
+      }
+    }
+    
+    // If template has custom column mappings, sort by column position
+    if (hasCustomColumnMappings) {
+      const orderedFields = [...travelFields].sort((a, b) => {
+        const aColumn = fieldToColumnMap.get(a.key);
+        const bColumn = fieldToColumnMap.get(b.key);
+        
+        // Fields with column mappings come first, sorted by column position
+        if (aColumn !== undefined && bColumn !== undefined) {
+          return aColumn - bColumn;
+        }
+        if (aColumn !== undefined) return -1; // Mapped fields first
+        if (bColumn !== undefined) return 1;
+        return 0; // Keep original order for unmapped fields
+      });
+      
+      return orderedFields;
+    }
+    
+    // No custom mappings - return default order
+    return travelFields;
+  }
+  
+  // Reactive ordered fields based on selected template
+  $: orderedFields = getOrderedFields(selectedTemplate);
 
   // Function to map CSV headers to expected field keys
   function mapHeaderToFieldKey(header: string): string {
@@ -1749,7 +1802,7 @@
             <thead>
               <tr>
                 <th>Row</th>
-                {#each travelFields as field}
+                {#each orderedFields as field}
                   <th>{field.name}</th>
                 {/each}
                 {#if activeTab === 'failed'}
@@ -1766,7 +1819,7 @@
                       <span class="duplicate-badge">DUP</span>
                     {/if}
                   </td>
-                  {#each travelFields as field}
+                  {#each orderedFields as field}
                     <td>{row[field.key] || '-'}</td>
                   {/each}
                   {#if activeTab === 'failed'}

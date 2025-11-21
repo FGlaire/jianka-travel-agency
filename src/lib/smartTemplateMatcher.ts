@@ -256,26 +256,69 @@ export class SmartTemplateMatcher {
       }
     }
     
-    // If template has no custom mappings, use default header-to-field matching (should be 100% for default CSV)
+    // If template has no custom column position mappings, check header positions
     if (!hasCustomMappings) {
+      // Build expected position map: fieldKey -> expectedColumnIndex (based on template field order)
+      const fieldKeyToExpectedPosition = new Map<string, number>();
+      const fieldKeyToHeaderName = new Map<string, string>();
+      
+      let expectedPosition = 0;
+      for (const [fieldKey, fieldMapping] of Object.entries(template.field_mappings)) {
+        if (fieldMapping && fieldMapping.headerName && fieldMapping.headerName.trim()) {
+          const headerName = fieldMapping.headerName.trim();
+          fieldKeyToExpectedPosition.set(fieldKey, expectedPosition);
+          fieldKeyToHeaderName.set(fieldKey, headerName);
+          expectedPosition++;
+        }
+      }
+      
+      // Check each CSV header position
       for (let i = 0; i < headers.length; i++) {
         const header = headers[i];
         const analysis = fieldAnalysis[i];
         
         if (!analysis) continue;
         
-        const templateField = this.findTemplateField(template, analysis.name);
+        // Find which field this header maps to
+        let matchedFieldKey: string | null = null;
+        for (const [fieldKey, headerName] of fieldKeyToHeaderName.entries()) {
+          if (this.headerMatchesField(header, fieldKey) || header === headerName) {
+            matchedFieldKey = fieldKey;
+            break;
+          }
+        }
         
-        if (templateField) {
-          // Perfect match: header name matches field name
-          totalScore += 1.0;
-          fieldCount++;
+        if (matchedFieldKey) {
+          const expectedPosition = fieldKeyToExpectedPosition.get(matchedFieldKey);
+          
+          if (expectedPosition !== undefined) {
+            // Check if header is in expected position
+            if (i === expectedPosition) {
+              // Perfect match: header name and position both match
+              totalScore += 1.0;
+              fieldCount++;
+            } else {
+              // Header name matches but position is wrong - reduced score
+              totalScore += 0.4; // Lower score for position mismatch
+              fieldCount++;
+            }
+          } else {
+            // Field found but no expected position - give partial score
+            totalScore += 0.6;
+            fieldCount++;
+          }
         } else {
           // Check for pattern-based matches
-          const patternScore = this.calculatePatternScore(template, analysis);
-          if (patternScore > 0) {
-            totalScore += patternScore;
+          const templateField = this.findTemplateField(template, analysis.name);
+          if (templateField) {
+            totalScore += 0.5; // Lower score for pattern match without position
             fieldCount++;
+          } else {
+            const patternScore = this.calculatePatternScore(template, analysis);
+            if (patternScore > 0) {
+              totalScore += patternScore * 0.3;
+              fieldCount++;
+            }
           }
         }
       }
