@@ -52,6 +52,7 @@
   let templateMatches: any[] = [];
   let showSmartMatching = false;
   let isTemplateChanging = false; // Flag to prevent infinite loops
+  let filesWithoutRawText: string[] = []; // Track files that can't be re-parsed
   
   // Reactive statement to handle template changes and re-parse files
   $: {
@@ -425,6 +426,13 @@
         console.log('Files with rawText:', uploadedFiles.filter(f => f.rawText).length);
         console.log('📊 Uploaded files array length:', uploadedFiles.length);
         console.log('📊 Filtered files will be computed by reactive statement');
+        
+        // Check for files without rawText and show warning
+        const filesWithoutRawTextOnLoad = uploadedFiles.filter(f => !f.rawText).map(f => f.name);
+        if (filesWithoutRawTextOnLoad.length > 0) {
+          filesWithoutRawText = filesWithoutRawTextOnLoad;
+          console.warn('⚠️ Some files cannot be re-parsed with different templates:', filesWithoutRawTextOnLoad);
+        }
       } else {
         console.log('No CSV files found in response');
       }
@@ -1186,6 +1194,7 @@
     if (!template) return;
     
     isReparsing = true;
+    filesWithoutRawText = []; // Reset the list
     console.log('🔄 Re-parsing all files with template:', template.template_name);
     
     try {
@@ -1201,6 +1210,7 @@
           return reparsedFile;
         } else {
           filesSkipped++;
+          filesWithoutRawText.push(file.name);
           console.warn(`⚠️ File "${file.name}" cannot be re-parsed: raw CSV text not available. Please re-upload this file to use a different template.`);
           return file;
         }
@@ -1593,7 +1603,7 @@
     <div class="upload-card">
       <h2>Upload CSV File</h2>
       
-      <!-- Template Selector -->
+      <!-- Template Selector - Always show when templates exist -->
       {#if templates.length > 0}
         <div class="template-selector">
           <div class="template-selector-row">
@@ -1608,6 +1618,22 @@
               </span>
             {/if}
           </div>
+          
+          <!-- Warning for files without rawText -->
+          {#if filesWithoutRawText.length > 0}
+            <div class="warning-message">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <div>
+                <strong>Some files cannot be re-parsed:</strong> {filesWithoutRawText.join(', ')}
+                <br>
+                <span class="warning-hint">These files were uploaded before template switching was available. Please re-upload them to use a different template.</span>
+              </div>
+            </div>
+          {/if}
           <select id="template-select" on:change={async (e) => {
             const target = e.target as HTMLSelectElement;
             if (!target) return;
@@ -2656,6 +2682,37 @@
   @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+  }
+  
+  .warning-message {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    margin-top: 1rem;
+    color: #856404;
+    font-size: 0.9rem;
+  }
+  
+  .warning-message svg {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+    color: #ff9800;
+  }
+  
+  .warning-message strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #856404;
+  }
+  
+  .warning-hint {
+    font-size: 0.85rem;
+    color: #856404;
+    opacity: 0.9;
   }
 
   .filter-toggle-btn {
