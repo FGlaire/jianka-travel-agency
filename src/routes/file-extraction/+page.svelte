@@ -460,13 +460,81 @@
       const columnValidation = validateColumns(headers);
       console.log('Column validation:', columnValidation);
       
+      // Parse CSV data using template mappings
       const data = lines.slice(1).map((line, index) => {
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
         const row: any = {};
-        headers.forEach((header, colIndex) => {
-          const mappedKey = mapHeaderToFieldKey(header);
-          row[mappedKey] = values[colIndex] || '';
-        });
+        
+        // If we have a template with custom mappings, use column positions
+        if (selectedTemplate && selectedTemplate.field_mappings) {
+          // Build a reverse mapping: column position -> field key
+          const columnToFieldMap = new Map<number, string>();
+          
+          // Only log mappings once per file (on first row)
+          const shouldLogMappings = index === 0;
+          
+          for (const [fieldKey, fieldMapping] of Object.entries(selectedTemplate.field_mappings)) {
+            if (fieldMapping.headerName) {
+              const headerName = fieldMapping.headerName.trim();
+              
+              // Check if it's a "Column X" format (e.g., "Column 1", "Column 2")
+              const columnMatch = headerName.match(/^Column\s+(\d+)$/i);
+              if (columnMatch) {
+                const columnNumber = parseInt(columnMatch[1]);
+                const columnIndex = columnNumber - 1; // Convert to 0-indexed
+                if (columnIndex >= 0 && columnIndex < values.length) {
+                  columnToFieldMap.set(columnIndex, fieldKey);
+                  if (shouldLogMappings) {
+                    console.log(`📌 Mapping column ${columnNumber} (index ${columnIndex}) → ${fieldKey}`);
+                  }
+                }
+              } 
+              // Check if it's just a number (e.g., "1", "2")
+              else if (/^\d+$/.test(headerName)) {
+                const columnNumber = parseInt(headerName);
+                const columnIndex = columnNumber - 1; // Convert to 0-indexed
+                if (columnIndex >= 0 && columnIndex < values.length) {
+                  columnToFieldMap.set(columnIndex, fieldKey);
+                  if (shouldLogMappings) {
+                    console.log(`📌 Mapping column ${columnNumber} (index ${columnIndex}) → ${fieldKey}`);
+                  }
+                }
+              } 
+              // Try to find the header name in the CSV headers
+              else {
+                const headerIndex = headers.findIndex(h => h === headerName);
+                if (headerIndex >= 0) {
+                  columnToFieldMap.set(headerIndex, fieldKey);
+                  if (shouldLogMappings) {
+                    console.log(`📌 Mapping header "${headerName}" (index ${headerIndex}) → ${fieldKey}`);
+                  }
+                }
+              }
+            }
+          }
+          
+          // Map values using column positions from template
+          columnToFieldMap.forEach((fieldKey, columnIndex) => {
+            row[fieldKey] = values[columnIndex] || '';
+          });
+          
+          // Also map any remaining headers using default logic
+          headers.forEach((header, colIndex) => {
+            if (!columnToFieldMap.has(colIndex)) {
+              const mappedKey = mapHeaderToFieldKey(header);
+              if (mappedKey && !row[mappedKey]) {
+                row[mappedKey] = values[colIndex] || '';
+              }
+            }
+          });
+        } else {
+          // No template or no custom mappings - use default header mapping
+          headers.forEach((header, colIndex) => {
+            const mappedKey = mapHeaderToFieldKey(header);
+            row[mappedKey] = values[colIndex] || '';
+          });
+        }
+        
         row._originalRowIndex = index + 2; // +2 because we skip header and 0-indexed
         return row;
       });
@@ -1068,6 +1136,12 @@
               selectedTemplate = template;
               console.log('✅ Template selected:', template.template_name, template);
               console.log('📋 Template field mappings:', template.field_mappings);
+              
+              // Re-parse uploaded files with the new template
+              if (uploadedFiles.length > 0) {
+                console.log('⚠️ Template changed! You may need to re-upload your CSV files to use the new template mappings.');
+                console.log('💡 Tip: Select your template BEFORE uploading CSV files for best results.');
+              }
             }
             showTemplateSelector = false;
           }}>
