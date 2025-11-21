@@ -683,11 +683,31 @@
             }
           });
         } else {
-          // No template or no custom mappings - use default header mapping
-          headers.forEach((header, colIndex) => {
-            const mappedKey = mapHeaderToFieldKey(header);
-            row[mappedKey] = values[colIndex] || '';
-          });
+          // No custom mappings - use position-based mapping for Default template
+          // Default template expects fields in a specific order, so we map by position
+          if (templateToUse && templateToUse.field_mappings) {
+            // Build position-based mapping from template field order
+            const fieldKeys = Object.keys(templateToUse.field_mappings);
+            fieldKeys.forEach((fieldKey, index) => {
+              if (index < values.length) {
+                row[fieldKey] = values[index] || '';
+              }
+            });
+            
+            // Log mapping on first row
+            if (index === 0) {
+              console.log('📌 Using position-based mapping for Default template');
+              fieldKeys.slice(0, 5).forEach((fieldKey, idx) => {
+                console.log(`📌 Mapping column ${idx + 1} (index ${idx}) → ${fieldKey}`);
+              });
+            }
+          } else {
+            // Fallback to header name matching if no template
+            headers.forEach((header, colIndex) => {
+              const mappedKey = mapHeaderToFieldKey(header);
+              row[mappedKey] = values[colIndex] || '';
+            });
+          }
         }
         
         row._originalRowIndex = index + 2; // +2 because we skip header and 0-indexed
@@ -2810,27 +2830,6 @@
     font-size: 1rem;
   }
 
-  .score-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-  }
-
-  .score-badge.high {
-    background: #1a4d1a;
-    color: #4ade80;
-  }
-
-  .score-badge.medium {
-    background: #4a3a1a;
-    color: #fbbf24;
-  }
-
-  .score-badge.low {
-    background: #4a1a1a;
-    color: #ff6b6b;
-  }
 
   .match-description {
     color: #9a9a9a;
