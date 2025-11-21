@@ -474,7 +474,12 @@
           const shouldLogMappings = index === 0;
           
           for (const [fieldKey, fieldMapping] of Object.entries(selectedTemplate.field_mappings)) {
-            if (fieldMapping.headerName) {
+            try {
+              // Skip if no headerName or if it's empty
+              if (!fieldMapping || !fieldMapping.headerName || !fieldMapping.headerName.trim()) {
+                continue;
+              }
+              
               const headerName = fieldMapping.headerName.trim();
               
               // Check if it's a "Column X" format (e.g., "Column 1", "Column 2")
@@ -510,6 +515,9 @@
                   }
                 }
               }
+            } catch (error) {
+              console.warn(`⚠️ Error processing field mapping for ${fieldKey}:`, error);
+              // Continue with other fields
             }
           }
           

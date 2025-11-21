@@ -110,7 +110,7 @@ export class SmartTemplateMatcher {
    */
   analyzeCSVHeaders(headers: string[], sampleData?: any[]): TemplateMatch[] {
     const fieldAnalysis = this.analyzeFields(headers, sampleData);
-    const matches = this.findMatchingTemplates(fieldAnalysis);
+    const matches = this.findMatchingTemplates(fieldAnalysis, headers);
     
     return matches.sort((a, b) => b.score - a.score);
   }
@@ -208,11 +208,11 @@ export class SmartTemplateMatcher {
   /**
    * Find templates that match the analyzed fields
    */
-  private findMatchingTemplates(fieldAnalysis: FieldAnalysis[]): TemplateMatch[] {
+  private findMatchingTemplates(fieldAnalysis: FieldAnalysis[], headers: string[]): TemplateMatch[] {
     const matches: TemplateMatch[] = [];
     
     for (const template of this.templates) {
-      const score = this.calculateTemplateScore(template, fieldAnalysis);
+      const score = this.calculateTemplateScore(template, fieldAnalysis, headers);
       const matchedFields = this.getMatchedFields(template, fieldAnalysis);
       
       if (score > 0.3) { // Minimum threshold
@@ -231,28 +231,103 @@ export class SmartTemplateMatcher {
   /**
    * Calculate how well a template matches the analyzed fields
    */
-  private calculateTemplateScore(template: EnhancedTemplate, fieldAnalysis: FieldAnalysis[]): number {
+  private calculateTemplateScore(template: EnhancedTemplate, fieldAnalysis: FieldAnalysis[], headers: string[]): number {
     let totalScore = 0;
     let fieldCount = 0;
     
-    for (const analysis of fieldAnalysis) {
-      const templateField = this.findTemplateField(template, analysis.name);
+    // Build a map of expected column positions from template
+    const templateColumnMap = new Map<number, string>(); // columnIndex -> fieldKey
+    
+    for (const [fieldKey, fieldMapping] of Object.entries(template.field_mappings)) {
+      if (fieldMapping && fieldMapping.headerName) {
+        const headerName = fieldMapping.headerName.trim();
+        
+        // Check if it's a "Column X" format or just a number
+        const columnMatch = headerName.match(/^Column\s+(\d+)$/i) || headerName.match(/^(\d+)$/);
+        if (columnMatch) {
+          const columnNumber = parseInt(columnMatch[1]);
+          const columnIndex = columnNumber - 1; // Convert to 0-indexed
+          if (columnIndex >= 0 && columnIndex < headers.length) {
+            templateColumnMap.set(columnIndex, fieldKey);
+          }
+        }
+      }
+    }
+    
+    // Check each CSV header position
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i];
+      const analysis = fieldAnalysis[i];
       
-      if (templateField) {
-        // Exact field match
-        totalScore += 1.0;
-        fieldCount++;
-      } else {
-        // Check for pattern-based matches
-        const patternScore = this.calculatePatternScore(template, analysis);
-        if (patternScore > 0) {
-          totalScore += patternScore;
+      if (!analysis) continue;
+      
+      // Check if this position is mapped in the template
+      const expectedFieldKey = templateColumnMap.get(i);
+      
+      if (expectedFieldKey) {
+        // This position is mapped - check if the header matches the expected field
+        const templateField = this.findTemplateField(template, expectedFieldKey);
+        const headerMatchesField = this.headerMatchesField(header, expectedFieldKey);
+        
+        if (headerMatchesField && templateField) {
+          // Perfect match: position and field name both match
+          totalScore += 1.0;
           fieldCount++;
+        } else if (templateField) {
+          // Position matches but field name doesn't - partial match (reduced score)
+          totalScore += 0.5;
+          fieldCount++;
+        } else {
+          // Position is mapped but field doesn't exist - low score
+          totalScore += 0.2;
+          fieldCount++;
+        }
+      } else {
+        // No specific position mapping - use default matching
+        const templateField = this.findTemplateField(template, analysis.name);
+        
+        if (templateField) {
+          // Field name matches
+          totalScore += 0.8; // Slightly lower than perfect position match
+          fieldCount++;
+        } else {
+          // Check for pattern-based matches
+          const patternScore = this.calculatePatternScore(template, analysis);
+          if (patternScore > 0) {
+            totalScore += patternScore * 0.7; // Reduce score for pattern matches
+            fieldCount++;
+          }
         }
       }
     }
     
     return fieldCount > 0 ? totalScore / fieldCount : 0;
+  }
+  
+  /**
+   * Check if a CSV header matches an expected field key
+   */
+  private headerMatchesField(header: string, fieldKey: string): boolean {
+    const normalizedHeader = header.toLowerCase().replace(/[_\s-]/g, '');
+    const normalizedKey = fieldKey.toLowerCase().replace(/[_\s-]/g, '');
+    
+    // Direct match
+    if (normalizedHeader === normalizedKey) return true;
+    
+    // Common variations
+    const variations: { [key: string]: string[] } = {
+      'id': ['id', 'identifier', 'customerid', 'clientid'],
+      'lastname': ['lastname', 'last name', 'surname', 'familyname'],
+      'firstname': ['firstname', 'first name', 'givenname', 'forename'],
+      'email': ['email', 'e-mail', 'emailaddress', 'mail'],
+      'phone': ['phone', 'phonenumber', 'telephone', 'mobile', 'cell']
+    };
+    
+    if (variations[normalizedKey]) {
+      return variations[normalizedKey].includes(normalizedHeader);
+    }
+    
+    return false;
   }
 
   /**
