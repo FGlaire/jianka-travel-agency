@@ -685,20 +685,20 @@
         } else {
           // No custom mappings - use position-based mapping for Default template
           // Default template expects fields in a specific order, so we map by position
+          // Use travelFields order (id, lastName, firstName, email, phone, ...) not Object.keys order
           if (templateToUse && templateToUse.field_mappings) {
-            // Build position-based mapping from template field order
-            const fieldKeys = Object.keys(templateToUse.field_mappings);
-            fieldKeys.forEach((fieldKey, index) => {
+            // Use travelFields array to get correct field order
+            travelFields.forEach((field, index) => {
               if (index < values.length) {
-                row[fieldKey] = values[index] || '';
+                row[field.key] = values[index] || '';
               }
             });
             
             // Log mapping on first row
             if (index === 0) {
               console.log('📌 Using position-based mapping for Default template');
-              fieldKeys.slice(0, 5).forEach((fieldKey, idx) => {
-                console.log(`📌 Mapping column ${idx + 1} (index ${idx}) → ${fieldKey}`);
+              travelFields.slice(0, 5).forEach((field, idx) => {
+                console.log(`📌 Mapping column ${idx + 1} (index ${idx}) → ${field.key}`);
               });
             }
           } else {
@@ -1139,11 +1139,23 @@
             }
           });
         } else {
-          // No template or no custom mappings - use default header mapping
-          headers.forEach((header: string, colIndex: number) => {
-            const mappedKey = mapHeaderToFieldKey(header);
-            row[mappedKey] = values[colIndex] || '';
-          });
+          // No custom mappings - use position-based mapping for Default template
+          // Default template expects fields in a specific order, so we map by position
+          // Use travelFields order (id, lastName, firstName, email, phone, ...) not Object.keys order
+          if (template && template.field_mappings) {
+            // Use travelFields array to get correct field order
+            travelFields.forEach((field, idx) => {
+              if (idx < values.length) {
+                row[field.key] = values[idx] || '';
+              }
+            });
+          } else {
+            // Fallback to header name matching if no template
+            headers.forEach((header: string, colIndex: number) => {
+              const mappedKey = mapHeaderToFieldKey(header);
+              row[mappedKey] = values[colIndex] || '';
+            });
+          }
         }
         
         row._originalRowIndex = index + 2;
