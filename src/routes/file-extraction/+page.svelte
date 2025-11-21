@@ -281,9 +281,9 @@
   function mapHeaderToFieldKey(header: string): string {
     if (selectedTemplate && selectedTemplate.field_mappings) {
       // Use template field mappings
-          const templateMappings = templateToUse.field_mappings;
-          
-          for (const [fieldKey, fieldMapping] of Object.entries(templateMappings)) {
+      const templateMappings = selectedTemplate.field_mappings;
+      
+      for (const [fieldKey, fieldMapping] of Object.entries(templateMappings)) {
         // Check if the CSV header matches the mapped column name
         if (fieldMapping.headerName && fieldMapping.headerName === header) {
           return fieldKey;
@@ -562,7 +562,7 @@
       const lines = text.split('\n').filter(line => line.trim() !== '');
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
       
-      // Smart template matching - always run to find best match
+      // Smart template matching - just for display, don't auto-select
       let templateToUse: EnhancedTemplate | null = selectedTemplate;
       
       if (templateMatcher && headers.length > 0) {
@@ -571,44 +571,24 @@
         );
         templateMatches = templateMatcher.analyzeCSVHeaders(headers, sampleData);
         
-        // Auto-select best matching template based on score
+        // Show smart matching results but don't auto-select
         if (templateMatches.length > 0) {
-          const bestMatch = templateMatches[0];
-          
-          // If best match has high confidence or score > 0.8, use it
-          // Otherwise, check if current selected template is a good match
-          if (bestMatch.confidence === 'high' || bestMatch.score > 0.8) {
-            templateToUse = bestMatch.template;
-            selectedTemplate = bestMatch.template;
-            console.log('✅ Auto-selected best matching template:', bestMatch.template.template_name, `(${Math.round(bestMatch.score * 100)}% match)`);
-            showSmartMatching = true;
-          } else if (selectedTemplate) {
-            // Check if current selected template is in the matches
-            const currentMatch = templateMatches.find(m => m.template.id === selectedTemplate?.id);
-            if (currentMatch && currentMatch.score > 0.5) {
-              // Current template is acceptable, keep it
-              templateToUse = selectedTemplate;
-              console.log('📌 Using currently selected template:', selectedTemplate.template_name, `(${Math.round(currentMatch.score * 100)}% match)`);
-            } else {
-              // Current template doesn't match well, use best match anyway
-              templateToUse = bestMatch.template;
-              selectedTemplate = bestMatch.template;
-              console.log('⚠️ Current template doesn\'t match well, switching to best match:', bestMatch.template.template_name, `(${Math.round(bestMatch.score * 100)}% match)`);
-            }
-          } else {
-            // No template selected, use best match
-            templateToUse = bestMatch.template;
-            selectedTemplate = bestMatch.template;
-            console.log('📌 No template selected, using best match:', bestMatch.template.template_name, `(${Math.round(bestMatch.score * 100)}% match)`);
-          }
-        } else {
-          // No matches found, use default template if available
-          const defaultTemplate = enhancedTemplates.find(t => t.is_default);
-          if (defaultTemplate) {
-            templateToUse = defaultTemplate;
-            selectedTemplate = defaultTemplate;
-            console.log('⚠️ No template matches found, using default template');
-          }
+          showSmartMatching = true;
+          console.log('📊 Template matches found (user can choose manually):', templateMatches.map(m => ({
+            name: m.template.template_name,
+            score: Math.round(m.score * 100) + '%',
+            confidence: m.confidence
+          })));
+        }
+      }
+      
+      // Use currently selected template, or default if none selected
+      if (!templateToUse) {
+        const defaultTemplate = enhancedTemplates.find(t => t.is_default);
+        if (defaultTemplate) {
+          templateToUse = defaultTemplate;
+          selectedTemplate = defaultTemplate;
+          console.log('📌 No template selected, using default template:', defaultTemplate.template_name);
         }
       }
       
