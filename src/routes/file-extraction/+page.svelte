@@ -1672,11 +1672,6 @@
                 <div class="template-match" class:selected={selectedTemplate?.id === match.template.id}>
                   <div class="match-header">
                     <h5>{match.template.template_name}</h5>
-                    <div class="match-score">
-                      <span class="score-badge" class:high={match.confidence === 'high'} class:medium={match.confidence === 'medium'} class:low={match.confidence === 'low'}>
-                        {Math.round(match.score * 100)}% match
-                      </span>
-                    </div>
                   </div>
                   <p class="match-description">{match.template.description}</p>
                   <div class="matched-fields">
