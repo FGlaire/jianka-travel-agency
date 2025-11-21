@@ -308,10 +308,14 @@
           uploadDate: new Date(file.upload_date),
           data: file.file_data || [],
           columns: file.columns || [],
+          rawText: file.raw_text || undefined, // Load raw text if available
+          templateId: file.template_id || undefined, // Load template ID if available
           columnValidation: file.column_validation,
           dbId: file.id
         }));
         console.log('Mapped uploaded files:', uploadedFiles);
+        console.log('Files with columns:', uploadedFiles.filter(f => f.columns && f.columns.length > 0).length);
+        console.log('Files with rawText:', uploadedFiles.filter(f => f.rawText).length);
       } else {
         console.log('No CSV files found in response');
       }
@@ -333,6 +337,7 @@
           fileSize: fileObj.size,
           fileData: fileObj.data,
           columns: fileObj.columns,
+          templateId: fileObj.templateId, // Save template ID
           columnValidation: fileObj.columnValidation,
           extractionResults: {
             successData,
@@ -1023,16 +1028,22 @@
    * Get files compatible with the selected template
    */
   function getCompatibleFiles(template: EnhancedTemplate | null): typeof uploadedFiles {
+    // If filter is off, show all files
+    if (!showTemplateFilter) {
+      return uploadedFiles;
+    }
+    
+    // If no template or templateMatcher not ready, show all files
     if (!template || !templateMatcher) {
       return uploadedFiles;
     }
     
-    if (!showTemplateFilter) {
-      return uploadedFiles; // Show all files if filter is off
-    }
-    
+    // Filter files by compatibility
     return uploadedFiles.filter(file => {
-      if (!file.columns || file.columns.length === 0) return false;
+      // If file doesn't have columns, include it (can't check compatibility)
+      if (!file.columns || file.columns.length === 0) {
+        return true; // Show files without columns
+      }
       
       try {
         if (templateMatcher) {
@@ -1044,8 +1055,11 @@
         }
       } catch (error) {
         console.warn('Error checking file compatibility:', error);
+        // On error, include the file to be safe
+        return true;
       }
       
+      // If no matches found, exclude from filtered view
       return false;
     });
   }

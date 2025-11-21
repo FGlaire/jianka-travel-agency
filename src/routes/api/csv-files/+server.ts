@@ -166,8 +166,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { fileName, fileSize, fileData, columns, columnValidation, extractionResults } = body;
-    console.log('Received CSV file data:', { fileName, fileSize, columns: columns?.length });
+    const { fileName, fileSize, fileData, columns, templateId, columnValidation, extractionResults } = body;
+    console.log('Received CSV file data:', { fileName, fileSize, columns: columns?.length, templateId });
 
     if (!fileName || !fileData || !columns) {
       console.log('Missing required fields');
@@ -188,18 +188,26 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Database error', details: tableError }, { status: 500 });
     }
 
+    // Build insert object (templateId will be ignored if column doesn't exist)
+    const insertData: any = {
+      user_id: user.id,
+      file_name: fileName,
+      file_size: fileSize || 0,
+      file_data: fileData,
+      columns: columns,
+      column_validation: columnValidation,
+      extraction_results: extractionResults
+    };
+    
+    // Add templateId if provided (will be ignored if column doesn't exist in DB)
+    if (templateId) {
+      insertData.template_id = templateId;
+    }
+
     // Insert CSV file into database
     const { data: csvFile, error } = await locals.supabase
       .from('csv_files')
-      .insert({
-        user_id: user.id,
-        file_name: fileName,
-        file_size: fileSize || 0,
-        file_data: fileData,
-        columns: columns,
-        column_validation: columnValidation,
-        extraction_results: extractionResults
-      })
+      .insert(insertData)
       .select()
       .single();
 
