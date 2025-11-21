@@ -475,8 +475,24 @@
         const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
         const row: any = {};
         
-        // If we have a template with custom mappings, use column positions
+        // Check if template has custom column position mappings (Column X or numbers)
+        // vs default header name mappings (actual header names like "ID", "Last Name")
+        let hasCustomColumnMappings = false;
         if (selectedTemplate && selectedTemplate.field_mappings) {
+          for (const [fieldKey, fieldMapping] of Object.entries(selectedTemplate.field_mappings)) {
+            if (fieldMapping && fieldMapping.headerName && fieldMapping.headerName.trim()) {
+              const headerName = fieldMapping.headerName.trim();
+              // Check if it's a column position (Column X or number), not a header name
+              if (headerName.match(/^Column\s+(\d+)$/i) || /^\d+$/.test(headerName)) {
+                hasCustomColumnMappings = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        // If we have custom column position mappings, use column positions
+        if (hasCustomColumnMappings && selectedTemplate && selectedTemplate.field_mappings) {
           // Build a reverse mapping: column position -> field key
           const columnToFieldMap = new Map<number, string>();
           
@@ -512,16 +528,6 @@
                   columnToFieldMap.set(columnIndex, fieldKey);
                   if (shouldLogMappings) {
                     console.log(`📌 Mapping column ${columnNumber} (index ${columnIndex}) → ${fieldKey}`);
-                  }
-                }
-              } 
-              // Try to find the header name in the CSV headers
-              else {
-                const headerIndex = headers.findIndex(h => h === headerName);
-                if (headerIndex >= 0) {
-                  columnToFieldMap.set(headerIndex, fieldKey);
-                  if (shouldLogMappings) {
-                    console.log(`📌 Mapping header "${headerName}" (index ${headerIndex}) → ${fieldKey}`);
                   }
                 }
               }
@@ -881,8 +887,24 @@
         const values = line.split(',').map((v: string) => v.trim().replace(/"/g, ''));
         const row: any = {};
         
-        // If we have a template with custom mappings, use column positions
+        // Check if template has custom column position mappings (Column X or numbers)
+        // vs default header name mappings (actual header names like "ID", "Last Name")
+        let hasCustomColumnMappings = false;
         if (template && template.field_mappings) {
+          for (const [fieldKey, fieldMapping] of Object.entries(template.field_mappings)) {
+            if (fieldMapping && fieldMapping.headerName && fieldMapping.headerName.trim()) {
+              const headerName = fieldMapping.headerName.trim();
+              // Check if it's a column position (Column X or number), not a header name
+              if (headerName.match(/^Column\s+(\d+)$/i) || /^\d+$/.test(headerName)) {
+                hasCustomColumnMappings = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        // If we have custom column position mappings, use column positions
+        if (hasCustomColumnMappings && template && template.field_mappings) {
           const columnToFieldMap = new Map<number, string>();
           
           for (const [fieldKey, fieldMapping] of Object.entries(template.field_mappings)) {
@@ -908,13 +930,6 @@
                 const columnIndex = columnNumber - 1;
                 if (columnIndex >= 0 && columnIndex < values.length) {
                   columnToFieldMap.set(columnIndex, fieldKey);
-                }
-              } 
-              // Try to find the header name in the CSV headers
-              else {
-                const headerIndex = headers.findIndex((h: string) => h === headerName);
-                if (headerIndex >= 0) {
-                  columnToFieldMap.set(headerIndex, fieldKey);
                 }
               }
             } catch (error) {
