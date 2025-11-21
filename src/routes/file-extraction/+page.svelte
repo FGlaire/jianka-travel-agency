@@ -166,22 +166,17 @@
     if (selectedTemplate && selectedTemplate.field_mappings) {
       // Use template field mappings
       const templateMappings = selectedTemplate.field_mappings;
-      console.log('🔍 Mapping header:', header, 'with template:', selectedTemplate.template_name);
-      console.log('📋 Template mappings:', templateMappings);
       
       for (const [fieldKey, fieldMapping] of Object.entries(templateMappings)) {
         // Check if the CSV header matches the mapped column name
         if (fieldMapping.headerName && fieldMapping.headerName === header) {
-          console.log('✅ Found mapping:', header, '→', fieldKey, '(via headerName)');
           return fieldKey;
         }
         // Also check if the CSV header matches the field key name (for backward compatibility)
         if (fieldKey === header) {
-          console.log('✅ Found mapping:', header, '→', fieldKey, '(via fieldKey)');
           return fieldKey;
         }
       }
-      console.log('❌ No template mapping found for:', header);
     }
     
     // Fallback to default mapping
@@ -213,9 +208,7 @@
       'Transportation': 'transportation'
     };
     
-    const result = headerMap[header] || header.toLowerCase().replace(/\s+/g, '');
-    console.log('🔄 Using fallback mapping:', header, '→', result);
-    return result;
+    return headerMap[header] || header.toLowerCase().replace(/\s+/g, '');
   }
 
   onMount(() => {
@@ -264,19 +257,28 @@
 
   async function loadTemplates() {
     try {
+      console.log('🔄 Loading templates...');
       const response = await fetch('/api/templates');
       const data = await response.json();
       
       if (data.templates) {
         templates = data.templates;
+        console.log('📦 Loaded templates:', templates.length);
+        console.log('📋 Template names:', templates.map(t => t.template_name));
+        
         // Enhance templates with smart matching capabilities
         enhancedTemplates = templates.map(template => SmartTemplateMatcher.enhanceTemplate(template));
         templateMatcher = new SmartTemplateMatcher(enhancedTemplates);
+        
         // Set default template as selected
         selectedTemplate = enhancedTemplates.find(t => t.is_default) || enhancedTemplates[0];
+        console.log('✅ Selected template:', selectedTemplate?.template_name);
+        console.log('📋 Selected template mappings:', selectedTemplate?.field_mappings);
+      } else {
+        console.warn('⚠️ No templates found in response');
       }
     } catch (error) {
-      console.error('Error loading templates:', error);
+      console.error('❌ Error loading templates:', error);
     }
   }
 
@@ -448,6 +450,11 @@
           showSmartMatching = true;
         }
       }
+      
+      // Log which template is being used
+      console.log('📄 File upload - Using template:', selectedTemplate?.template_name || 'None');
+      console.log('📋 Selected template mappings:', selectedTemplate?.field_mappings);
+      console.log('📊 CSV Headers from file:', headers);
       
       // Validate column order and structure
       const columnValidation = validateColumns(headers);
@@ -1052,9 +1059,22 @@
       {#if templates.length > 0}
         <div class="template-selector">
           <label for="template-select">Select Template:</label>
-          <select id="template-select" bind:value={selectedTemplate} on:change={() => showTemplateSelector = false}>
-            {#each templates as template}
-              <option value={template}>{template.template_name}</option>
+          <select id="template-select" on:change={(e) => {
+            const target = e.target as HTMLSelectElement;
+            if (!target) return;
+            const selectedId = target.value;
+            const template = enhancedTemplates.find(t => t.id === selectedId);
+            if (template) {
+              selectedTemplate = template;
+              console.log('✅ Template selected:', template.template_name, template);
+              console.log('📋 Template field mappings:', template.field_mappings);
+            }
+            showTemplateSelector = false;
+          }}>
+            {#each enhancedTemplates as template}
+              <option value={template.id} selected={selectedTemplate?.id === template.id}>
+                {template.template_name}
+              </option>
             {/each}
           </select>
           <button class="template-info-btn" on:click={() => showTemplateSelector = !showTemplateSelector} aria-label="Show template information">
