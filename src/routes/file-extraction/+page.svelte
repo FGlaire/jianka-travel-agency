@@ -1141,14 +1141,26 @@
             const selectedId = target.value;
             const template = enhancedTemplates.find(t => t.id === selectedId);
             if (template) {
+              const previousTemplate = selectedTemplate;
               selectedTemplate = template;
-              console.log('✅ Template selected:', template.template_name, template);
+              console.log('✅ Template selected:', template.template_name);
               console.log('📋 Template field mappings:', template.field_mappings);
               
-              // Re-parse uploaded files with the new template
-              if (uploadedFiles.length > 0) {
-                console.log('⚠️ Template changed! You may need to re-upload your CSV files to use the new template mappings.');
-                console.log('💡 Tip: Select your template BEFORE uploading CSV files for best results.');
+              // Check if template has custom mappings
+              const hasCustomMappings = Object.values(template.field_mappings || {}).some(
+                (m: any) => m && m.headerName && m.headerName.trim()
+              );
+              if (hasCustomMappings) {
+                console.log('📌 This template uses custom column mappings');
+              } else {
+                console.log('📌 This template uses default column mappings');
+              }
+              
+              // Warn if template changed and files are already uploaded
+              if (uploadedFiles.length > 0 && previousTemplate && previousTemplate.id !== template.id) {
+                console.warn('⚠️ Template changed! Uploaded files were parsed with the previous template.');
+                console.warn('💡 You need to RE-UPLOAD your CSV files for the new template to take effect.');
+                alert('Template changed! Please re-upload your CSV files for the new template mappings to be applied.');
               }
             }
             showTemplateSelector = false;
