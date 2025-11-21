@@ -28,8 +28,19 @@
   let isReparsing = false;
   let showTemplateFilter = false;
   
-  // Reactive filtered files list
-  $: filteredFiles = getCompatibleFiles(selectedTemplate);
+  // Filtered files list
+  let filteredFiles: typeof uploadedFiles = [];
+  
+  // Reactive filtered files list - ensure it's always initialized
+  $: {
+    filteredFiles = getCompatibleFiles(selectedTemplate) || uploadedFiles || [];
+    console.log('🔄 Filtered files updated:', {
+      filteredCount: filteredFiles.length,
+      uploadedCount: uploadedFiles.length,
+      hasTemplate: !!selectedTemplate,
+      filterEnabled: showTemplateFilter
+    });
+  }
 
   // Template state
   let templates: EnhancedTemplate[] = [];
@@ -316,6 +327,8 @@
         console.log('Mapped uploaded files:', uploadedFiles);
         console.log('Files with columns:', uploadedFiles.filter(f => f.columns && f.columns.length > 0).length);
         console.log('Files with rawText:', uploadedFiles.filter(f => f.rawText).length);
+        console.log('📊 Uploaded files array length:', uploadedFiles.length);
+        console.log('📊 Filtered files will be computed by reactive statement');
       } else {
         console.log('No CSV files found in response');
       }
@@ -1028,6 +1041,11 @@
    * Get files compatible with the selected template
    */
   function getCompatibleFiles(template: EnhancedTemplate | null): typeof uploadedFiles {
+    // Always return uploadedFiles if it's empty or undefined
+    if (!uploadedFiles || uploadedFiles.length === 0) {
+      return uploadedFiles || [];
+    }
+    
     // If filter is off, show all files
     if (!showTemplateFilter) {
       return uploadedFiles;
@@ -1039,7 +1057,7 @@
     }
     
     // Filter files by compatibility
-    return uploadedFiles.filter(file => {
+    const filtered = uploadedFiles.filter(file => {
       // If file doesn't have columns, include it (can't check compatibility)
       if (!file.columns || file.columns.length === 0) {
         return true; // Show files without columns
@@ -1062,6 +1080,16 @@
       // If no matches found, exclude from filtered view
       return false;
     });
+    
+    console.log('🔍 Filtered files:', { 
+      total: uploadedFiles.length, 
+      filtered: filtered.length, 
+      filterEnabled: showTemplateFilter,
+      hasTemplate: !!template,
+      hasMatcher: !!templateMatcher
+    });
+    
+    return filtered;
   }
 
   function isValidEmail(email: string): boolean {
