@@ -14,6 +14,8 @@
     uploadDate: Date;
     data: any[];
     columns: string[];
+    rawText?: string; // Store original CSV text for re-parsing
+    templateId?: string; // Track which template was used for parsing
     columnValidation?: {
       isValid: boolean;
       errors: string[];
@@ -21,6 +23,13 @@
     };
     dbId?: string; // Database ID for deletion
   }> = [];
+  
+  // Re-parsing state
+  let isReparsing = false;
+  let showTemplateFilter = false;
+  
+  // Reactive filtered files list
+  $: filteredFiles = getCompatibleFiles(selectedTemplate);
 
   // Template state
   let templates: EnhancedTemplate[] = [];
@@ -434,6 +443,7 @@
     try {
       // Parse CSV file
       const text = await file.text();
+      const rawText = text; // Store raw CSV text for re-parsing
       const lines = text.split('\n').filter(line => line.trim() !== '');
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
       
@@ -559,6 +569,8 @@
         uploadDate: new Date(),
         data: data,
         columns: headers,
+        rawText: rawText, // Store raw CSV for re-parsing
+        templateId: selectedTemplate?.id, // Track which template was used
         columnValidation: columnValidation
       };
 
@@ -851,6 +863,178 @@
     }
   }
 
+  /**
+   * Re-parse a file with a different template
+   */
+  function reparseFileWithTemplate(file: any, template: EnhancedTemplate): any {
+    if (!file.rawText) {
+      console.warn('⚠️ Cannot re-parse file: raw CSV text not available');
+      return file;
+    }
+
+    try {
+      const lines = file.rawText.split('\n').filter((line: string) => line.trim() !== '');
+      const headers = lines[0].split(',').map((h: string) => h.trim().replace(/"/g, ''));
+      
+      // Parse CSV data using template mappings (same logic as upload)
+      const data = lines.slice(1).map((line: string, index: number) => {
+        const values = line.split(',').map((v: string) => v.trim().replace(/"/g, ''));
+        const row: any = {};
+        
+        // If we have a template with custom mappings, use column positions
+        if (template && template.field_mappings) {
+          const columnToFieldMap = new Map<number, string>();
+          
+          for (const [fieldKey, fieldMapping] of Object.entries(template.field_mappings)) {
+            try {
+              if (!fieldMapping || !fieldMapping.headerName || !fieldMapping.headerName.trim()) {
+                continue;
+              }
+              
+              const headerName = fieldMapping.headerName.trim();
+              
+              // Check if it's a "Column X" format
+              const columnMatch = headerName.match(/^Column\s+(\d+)$/i);
+              if (columnMatch) {
+                const columnNumber = parseInt(columnMatch[1]);
+                const columnIndex = columnNumber - 1;
+                if (columnIndex >= 0 && columnIndex < values.length) {
+                  columnToFieldMap.set(columnIndex, fieldKey);
+                }
+              } 
+              // Check if it's just a number
+              else if (/^\d+$/.test(headerName)) {
+                const columnNumber = parseInt(headerName);
+                const columnIndex = columnNumber - 1;
+                if (columnIndex >= 0 && columnIndex < values.length) {
+                  columnToFieldMap.set(columnIndex, fieldKey);
+                }
+              } 
+              // Try to find the header name in the CSV headers
+              else {
+                const headerIndex = headers.findIndex((h: string) => h === headerName);
+                if (headerIndex >= 0) {
+                  columnToFieldMap.set(headerIndex, fieldKey);
+                }
+              }
+            } catch (error) {
+              console.warn(`⚠️ Error processing field mapping for ${fieldKey}:`, error);
+            }
+          }
+          
+          // Map values using column positions from template
+          columnToFieldMap.forEach((fieldKey, columnIndex) => {
+            row[fieldKey] = values[columnIndex] || '';
+          });
+          
+          // Also map any remaining headers using default logic
+          headers.forEach((header: string, colIndex: number) => {
+            if (!columnToFieldMap.has(colIndex)) {
+              const mappedKey = mapHeaderToFieldKey(header);
+              if (mappedKey && !row[mappedKey]) {
+                row[mappedKey] = values[colIndex] || '';
+              }
+            }
+          });
+        } else {
+          // No template or no custom mappings - use default header mapping
+          headers.forEach((header: string, colIndex: number) => {
+            const mappedKey = mapHeaderToFieldKey(header);
+            row[mappedKey] = values[colIndex] || '';
+          });
+        }
+        
+        row._originalRowIndex = index + 2;
+        return row;
+      });
+
+      // Validate columns with new template
+      const columnValidation = validateColumns(headers);
+      
+      // Update file object
+      return {
+        ...file,
+        data: data,
+        columns: headers,
+        templateId: template.id,
+        columnValidation: columnValidation
+      };
+    } catch (error) {
+      console.error('Error re-parsing file:', error);
+      return file;
+    }
+  }
+
+  /**
+   * Re-parse all uploaded files with the current template
+   */
+  async function reparseAllFilesWithTemplate(template: EnhancedTemplate) {
+    if (!template) return;
+    
+    isReparsing = true;
+    console.log('🔄 Re-parsing all files with template:', template.template_name);
+    
+    try {
+      uploadedFiles = uploadedFiles.map(file => {
+        if (file.rawText) {
+          return reparseFileWithTemplate(file, template);
+        }
+        return file;
+      });
+      
+      // Clear extraction results since data has changed
+      if (selectedFile) {
+        // Find the updated file
+        const updatedFile = uploadedFiles.find(f => f.id === selectedFile.id);
+        if (updatedFile) {
+          selectedFile = updatedFile;
+        }
+      }
+      
+      successData = [];
+      failedData = [];
+      extractedData = [];
+      
+      console.log('✅ Re-parsing complete');
+    } catch (error) {
+      console.error('❌ Error re-parsing files:', error);
+      alert('Error re-parsing files with new template');
+    } finally {
+      isReparsing = false;
+    }
+  }
+
+  /**
+   * Get files compatible with the selected template
+   */
+  function getCompatibleFiles(template: EnhancedTemplate | null): typeof uploadedFiles {
+    if (!template || !templateMatcher) {
+      return uploadedFiles;
+    }
+    
+    if (!showTemplateFilter) {
+      return uploadedFiles; // Show all files if filter is off
+    }
+    
+    return uploadedFiles.filter(file => {
+      if (!file.columns || file.columns.length === 0) return false;
+      
+      try {
+        if (templateMatcher) {
+          const matches = templateMatcher.analyzeCSVHeaders(file.columns);
+          if (matches.length > 0) {
+            const bestMatch = matches.find(m => m.template.id === template.id);
+            return bestMatch && bestMatch.score > 0.5; // 50% compatibility threshold
+          }
+        }
+      } catch (error) {
+        console.warn('Error checking file compatibility:', error);
+      }
+      
+      return false;
+    });
+  }
+
   function isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -1134,8 +1318,19 @@
       <!-- Template Selector -->
       {#if templates.length > 0}
         <div class="template-selector">
-          <label for="template-select">Select Template:</label>
-          <select id="template-select" on:change={(e) => {
+          <div class="template-selector-row">
+            <label for="template-select">Select Template:</label>
+            {#if isReparsing}
+              <span class="reparsing-indicator">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                Re-parsing files...
+              </span>
+            {/if}
+          </div>
+          <select id="template-select" on:change={async (e) => {
             const target = e.target as HTMLSelectElement;
             if (!target) return;
             const selectedId = target.value;
@@ -1156,11 +1351,13 @@
                 console.log('📌 This template uses default column mappings');
               }
               
-              // Warn if template changed and files are already uploaded
+              // Re-parse all files with new template if files are already uploaded
               if (uploadedFiles.length > 0 && previousTemplate && previousTemplate.id !== template.id) {
-                console.warn('⚠️ Template changed! Uploaded files were parsed with the previous template.');
-                console.warn('💡 You need to RE-UPLOAD your CSV files for the new template to take effect.');
-                alert('Template changed! Please re-upload your CSV files for the new template mappings to be applied.');
+                console.log('🔄 Template changed - re-parsing all files...');
+                await reparseAllFilesWithTemplate(template);
+              } else if (uploadedFiles.length > 0 && !previousTemplate) {
+                // First template selection with existing files
+                await reparseAllFilesWithTemplate(template);
               }
             }
             showTemplateSelector = false;
@@ -1178,6 +1375,19 @@
               <path d="M12 8h.01"/>
             </svg>
           </button>
+          {#if uploadedFiles.length > 0}
+            <button 
+              class="filter-toggle-btn" 
+              class:active={showTemplateFilter}
+              on:click={() => showTemplateFilter = !showTemplateFilter}
+              title="Filter files by template compatibility"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+              </svg>
+              {showTemplateFilter ? 'Show All' : 'Filter Compatible'}
+            </button>
+          {/if}
         </div>
         
         {#if showTemplateSelector}
@@ -1273,7 +1483,7 @@
       {#if uploadedFiles.length > 0}
         <div class="uploaded-files">
           <div class="uploaded-files-header">
-            <h3>Uploaded Files ({uploadedFiles.length})</h3>
+            <h3>Uploaded Files ({showTemplateFilter ? filteredFiles.length : uploadedFiles.length} of {uploadedFiles.length})</h3>
             <button class="add-more-btn" on:click={() => fileInput?.click()}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="12" y1="5" x2="12" y2="19"/>
@@ -1283,7 +1493,7 @@
             </button>
           </div>
           <div class="file-list">
-            {#each uploadedFiles as file (file.id)}
+            {#each filteredFiles as file (file.id)}
               <div 
                 class="file-item" 
                 class:selected={selectedFile?.id === file.id} 
@@ -1302,6 +1512,11 @@
                   <div class="file-details">
                     <h4>{file.name}</h4>
                     <p>{formatFileSize(file.size)} • {file.uploadDate.toLocaleDateString()}</p>
+                    {#if file.templateId}
+                      <p class="template-badge">
+                        Template: {enhancedTemplates.find(t => t.id === file.templateId)?.template_name || 'Unknown'}
+                      </p>
+                    {/if}
                   </div>
                 </div>
                 <div class="file-actions">
@@ -1351,7 +1566,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each uploadedFiles as file (file.id)}
+              {#each filteredFiles as file (file.id)}
                 <tr class:selected={selectedFile?.id === file.id} on:click={() => selectFile(file)}>
                   <td>
                     <div class="file-name">
@@ -1360,6 +1575,11 @@
                         <polyline points="14,2 14,8 20,8"/>
                       </svg>
                       {file.name}
+                      {#if file.templateId}
+                        <span class="template-badge-small">
+                          ({enhancedTemplates.find(t => t.id === file.templateId)?.template_name || 'Unknown'})
+                        </span>
+                      {/if}
                     </div>
                   </td>
                   <td>{formatFileSize(file.size)}</td>
@@ -2124,6 +2344,70 @@
   .template-info-btn:hover {
     background: #555555;
     border-color: #777777;
+  }
+
+  .template-selector-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .reparsing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #cb9f4d;
+    font-size: 0.85rem;
+    margin-left: auto;
+  }
+
+  .reparsing-indicator .spinning {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .filter-toggle-btn {
+    background: #333333;
+    color: #ffffff;
+    border: 1px solid #555555;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    margin-left: auto;
+  }
+
+  .filter-toggle-btn:hover {
+    background: #555555;
+    border-color: #777777;
+  }
+
+  .filter-toggle-btn.active {
+    background: #cb9f4d;
+    color: #000000;
+    border-color: #cb9f4d;
+  }
+
+  .template-badge {
+    font-size: 0.75rem;
+    color: #cb9f4d;
+    margin-top: 0.25rem;
+  }
+
+  .template-badge-small {
+    font-size: 0.7rem;
+    color: #999999;
+    margin-left: 0.5rem;
+    font-style: italic;
   }
 
   .template-info {
