@@ -211,11 +211,41 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Insert CSV file into database
-    const { data: csvFile, error } = await locals.supabase
+    // If raw_text or template_id columns don't exist, try without them
+    let csvFile;
+    let error;
+    
+    const result = await locals.supabase
       .from('csv_files')
       .insert(insertData)
       .select()
       .single();
+    csvFile = result.data;
+    error = result.error;
+    
+    // If error is about missing columns, try without rawText and templateId
+    if (error && (error.message?.includes('column') || error.message?.includes('does not exist') || error.code === '42703')) {
+      console.log('⚠️ Columns may not exist, trying without rawText and templateId...');
+      const insertDataWithoutNewFields = {
+        user_id: insertData.user_id,
+        file_name: insertData.file_name,
+        file_size: insertData.file_size,
+        file_data: insertData.file_data,
+        columns: insertData.columns,
+        column_validation: insertData.column_validation,
+        extraction_results: insertData.extraction_results
+      };
+      const retryResult = await locals.supabase
+        .from('csv_files')
+        .insert(insertDataWithoutNewFields)
+        .select()
+        .single();
+      csvFile = retryResult.data;
+      error = retryResult.error;
+      if (!error) {
+        console.log('✅ File saved without rawText/templateId columns');
+      }
+    }
 
     if (error) {
       console.error('Error saving CSV file:', error);
