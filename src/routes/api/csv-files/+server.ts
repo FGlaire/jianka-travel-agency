@@ -166,8 +166,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { fileName, fileSize, fileData, columns, templateId, columnValidation, extractionResults } = body;
-    console.log('Received CSV file data:', { fileName, fileSize, columns: columns?.length, templateId });
+    const { fileName, fileSize, fileData, columns, rawText, templateId, columnValidation, extractionResults } = body;
+    console.log('Received CSV file data:', { fileName, fileSize, columns: columns?.length, templateId, hasRawText: !!rawText });
 
     if (!fileName || !fileData || !columns) {
       console.log('Missing required fields');
@@ -188,7 +188,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: 'Database error', details: tableError }, { status: 500 });
     }
 
-    // Build insert object (templateId will be ignored if column doesn't exist)
+    // Build insert object (templateId and rawText will be ignored if columns don't exist)
     const insertData: any = {
       user_id: user.id,
       file_name: fileName,
@@ -202,6 +202,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     // Add templateId if provided (will be ignored if column doesn't exist in DB)
     if (templateId) {
       insertData.template_id = templateId;
+    }
+    
+    // Add rawText if provided (will be ignored if column doesn't exist in DB)
+    // Note: rawText can be large, consider storing in separate table or file storage for production
+    if (rawText) {
+      insertData.raw_text = rawText;
     }
 
     // Insert CSV file into database

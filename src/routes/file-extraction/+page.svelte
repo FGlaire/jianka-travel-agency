@@ -350,6 +350,7 @@
           fileSize: fileObj.size,
           fileData: fileObj.data,
           columns: fileObj.columns,
+          rawText: fileObj.rawText, // Save raw CSV text for re-parsing
           templateId: fileObj.templateId, // Save template ID
           columnValidation: fileObj.columnValidation,
           extractionResults: {
@@ -1008,12 +1009,26 @@
     console.log('🔄 Re-parsing all files with template:', template.template_name);
     
     try {
+      let filesReparsed = 0;
+      let filesSkipped = 0;
+      
       uploadedFiles = uploadedFiles.map(file => {
         if (file.rawText) {
+          filesReparsed++;
           return reparseFileWithTemplate(file, template);
+        } else {
+          filesSkipped++;
+          console.warn(`⚠️ File "${file.name}" cannot be re-parsed: raw CSV text not available. Please re-upload this file to use a different template.`);
+          return file;
         }
-        return file;
       });
+      
+      // Show user-friendly message if some files couldn't be re-parsed
+      if (filesSkipped > 0) {
+        alert(`${filesSkipped} file(s) could not be re-parsed because they don't have raw CSV data stored.\n\nPlease re-upload these files to use them with different templates.\n\nFiles re-parsed: ${filesReparsed}\nFiles skipped: ${filesSkipped}`);
+      } else if (filesReparsed > 0) {
+        console.log(`✅ Re-parsed ${filesReparsed} file(s) with template: ${template.template_name}`);
+      }
       
       // Clear extraction results since data has changed
       if (selectedFile) {
