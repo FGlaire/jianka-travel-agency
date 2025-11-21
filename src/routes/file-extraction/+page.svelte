@@ -51,15 +51,20 @@
   let showTemplateSelector = false;
   let templateMatches: any[] = [];
   let showSmartMatching = false;
+  let isTemplateChanging = false; // Flag to prevent infinite loops
   
   // Reactive statement to handle template changes and re-parse files
   $: {
-    if (selectedTemplate && selectedTemplate.id !== previousSelectedTemplateId) {
+    if (!isTemplateChanging && selectedTemplate && selectedTemplate.id !== previousSelectedTemplateId) {
       // Template changed - re-parse files if we have any
       if (uploadedFiles.length > 0 && previousSelectedTemplateId !== null) {
-        console.log('🔄 Template changed reactively - re-parsing all files...');
-        reparseAllFilesWithTemplate(selectedTemplate).catch(error => {
+        isTemplateChanging = true;
+        console.log('🔄 Template changed reactively from', previousSelectedTemplateId, 'to', selectedTemplate.id, '- re-parsing all files...');
+        reparseAllFilesWithTemplate(selectedTemplate).then(() => {
+          isTemplateChanging = false;
+        }).catch(error => {
           console.error('Error re-parsing files on template change:', error);
+          isTemplateChanging = false;
         });
       }
       previousSelectedTemplateId = selectedTemplate.id;
@@ -276,9 +281,9 @@
   function mapHeaderToFieldKey(header: string): string {
     if (selectedTemplate && selectedTemplate.field_mappings) {
       // Use template field mappings
-      const templateMappings = selectedTemplate.field_mappings;
-      
-      for (const [fieldKey, fieldMapping] of Object.entries(templateMappings)) {
+          const templateMappings = templateToUse.field_mappings;
+          
+          for (const [fieldKey, fieldMapping] of Object.entries(templateMappings)) {
         // Check if the CSV header matches the mapped column name
         if (fieldMapping.headerName && fieldMapping.headerName === header) {
           return fieldKey;
@@ -557,23 +562,59 @@
       const lines = text.split('\n').filter(line => line.trim() !== '');
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
       
-      // Smart template matching
+      // Smart template matching - always run to find best match
+      let templateToUse: EnhancedTemplate | null = selectedTemplate;
+      
       if (templateMatcher && headers.length > 0) {
         const sampleData = lines.slice(1, 3).map(line => 
           line.split(',').map(v => v.trim().replace(/"/g, ''))
         );
         templateMatches = templateMatcher.analyzeCSVHeaders(headers, sampleData);
         
-        // Auto-select best matching template if confidence is high
-        if (templateMatches.length > 0 && templateMatches[0].confidence === 'high') {
-          selectedTemplate = templateMatches[0].template;
-          showSmartMatching = true;
+        // Auto-select best matching template based on score
+        if (templateMatches.length > 0) {
+          const bestMatch = templateMatches[0];
+          
+          // If best match has high confidence or score > 0.8, use it
+          // Otherwise, check if current selected template is a good match
+          if (bestMatch.confidence === 'high' || bestMatch.score > 0.8) {
+            templateToUse = bestMatch.template;
+            selectedTemplate = bestMatch.template;
+            console.log('✅ Auto-selected best matching template:', bestMatch.template.template_name, `(${Math.round(bestMatch.score * 100)}% match)`);
+            showSmartMatching = true;
+          } else if (selectedTemplate) {
+            // Check if current selected template is in the matches
+            const currentMatch = templateMatches.find(m => m.template.id === selectedTemplate?.id);
+            if (currentMatch && currentMatch.score > 0.5) {
+              // Current template is acceptable, keep it
+              templateToUse = selectedTemplate;
+              console.log('📌 Using currently selected template:', selectedTemplate.template_name, `(${Math.round(currentMatch.score * 100)}% match)`);
+            } else {
+              // Current template doesn't match well, use best match anyway
+              templateToUse = bestMatch.template;
+              selectedTemplate = bestMatch.template;
+              console.log('⚠️ Current template doesn\'t match well, switching to best match:', bestMatch.template.template_name, `(${Math.round(bestMatch.score * 100)}% match)`);
+            }
+          } else {
+            // No template selected, use best match
+            templateToUse = bestMatch.template;
+            selectedTemplate = bestMatch.template;
+            console.log('📌 No template selected, using best match:', bestMatch.template.template_name, `(${Math.round(bestMatch.score * 100)}% match)`);
+          }
+        } else {
+          // No matches found, use default template if available
+          const defaultTemplate = enhancedTemplates.find(t => t.is_default);
+          if (defaultTemplate) {
+            templateToUse = defaultTemplate;
+            selectedTemplate = defaultTemplate;
+            console.log('⚠️ No template matches found, using default template');
+          }
         }
       }
       
       // Log which template is being used
-      console.log('📄 File upload - Using template:', selectedTemplate?.template_name || 'None');
-      console.log('📋 Selected template mappings:', selectedTemplate?.field_mappings);
+      console.log('📄 File upload - Using template:', templateToUse?.template_name || 'None');
+      console.log('📋 Selected template mappings:', templateToUse?.field_mappings);
       console.log('📊 CSV Headers from file:', headers);
       
       // Validate column order and structure
@@ -588,8 +629,8 @@
         // Check if template has custom column position mappings (Column X or numbers)
         // vs default header name mappings (actual header names like "ID", "Last Name")
         let hasCustomColumnMappings = false;
-        if (selectedTemplate && selectedTemplate.field_mappings) {
-          for (const [fieldKey, fieldMapping] of Object.entries(selectedTemplate.field_mappings)) {
+        if (templateToUse && templateToUse.field_mappings) {
+          for (const [fieldKey, fieldMapping] of Object.entries(templateToUse.field_mappings)) {
             if (fieldMapping && fieldMapping.headerName && fieldMapping.headerName.trim()) {
               const headerName = fieldMapping.headerName.trim();
               // Check if it's a column position (Column X or number), not a header name
@@ -602,14 +643,14 @@
         }
         
         // If we have custom column position mappings, use column positions
-        if (hasCustomColumnMappings && selectedTemplate && selectedTemplate.field_mappings) {
+        if (hasCustomColumnMappings && templateToUse && templateToUse.field_mappings) {
           // Build a reverse mapping: column position -> field key
           const columnToFieldMap = new Map<number, string>();
           
           // Only log mappings once per file (on first row)
           const shouldLogMappings = index === 0;
           
-          for (const [fieldKey, fieldMapping] of Object.entries(selectedTemplate.field_mappings)) {
+          for (const [fieldKey, fieldMapping] of Object.entries(templateToUse.field_mappings)) {
             try {
               // Skip if no headerName or if it's empty
               if (!fieldMapping || !fieldMapping.headerName || !fieldMapping.headerName.trim()) {
@@ -686,7 +727,7 @@
         data: data,
         columns: headers,
         rawText: rawText, // Store raw CSV for re-parsing
-        templateId: selectedTemplate?.id, // Track which template was used
+        templateId: templateToUse?.id, // Track which template was actually used for parsing
         columnValidation: columnValidation
       };
 
