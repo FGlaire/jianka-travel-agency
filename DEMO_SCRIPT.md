@@ -21,6 +21,7 @@
 This system is designed to help travel agencies process customer data from CSV files with intelligent field mapping, validation, and template-based extraction. The system handles various CSV formats and allows users to create custom templates for different data structures.
 
 **What we'll demonstrate today:**
+- Homepage flight time display (interactive hover feature)
 - CSV file upload and parsing
 - Custom template creation with drag-and-drop field mapping
 - Smart template matching
@@ -38,7 +39,10 @@ This system is designed to help travel agencies process customer data from CSV f
 - **Svelte Transitions** - Smooth animations and UI effects
 
 ### Backend
-- **SvelteKit API Routes** - Server-side endpoints (`/api/templates`, `/api/csv-files`)
+- **SvelteKit API Routes** - Server-side endpoints:
+  - `/api/templates` - Template CRUD operations
+  - `/api/csv-files` - CSV file management
+  - `/api/flights` - Flight time data (homepage feature)
 - **Supabase** - Database and authentication
   - PostgreSQL database
   - Row Level Security (RLS) for data protection
@@ -48,6 +52,8 @@ This system is designed to help travel agencies process customer data from CSV f
 - **Smart Template Matcher** - Custom algorithm for template compatibility scoring
 - **Drag & Drop API** - For intuitive field mapping
 - **CSV Parsing** - Custom parsing logic with position-based and name-based mapping
+- **GSAP Animations** - Smooth transitions and scroll-triggered animations
+- **Flight Time API** - Real-time flight duration display on homepage
 
 ### Database Schema
 - `csv_files` table - Stores uploaded CSV data, raw text, and extraction results
@@ -90,6 +96,13 @@ This system is designed to help travel agencies process customer data from CSV f
 ---
 
 ## ✨ Key Features
+
+### 0. **Homepage Flight Time Display** (Bonus Feature)
+- **Interactive City Hover**: Hover over cities (Berlin, London, New York, Tokyo, Seoul) to see flight durations
+- **Real-time Updates**: Flight times update every 30 seconds via API
+- **Smooth Animations**: GSAP-powered slide animations when hovering
+- **API Integration**: `/api/flights` endpoint provides flight duration data
+- **Visual Feedback**: City name slides up, flight time slides in with golden color
 
 ### 1. **CSV File Upload**
 - Drag-and-drop interface
@@ -138,6 +151,46 @@ This system is designed to help travel agencies process customer data from CSV f
 ---
 
 ## 🎬 Step-by-Step Demonstration
+
+### **Part 0: Homepage Flight Time Feature** (Optional Demo)
+
+**Step 1: Navigate to Homepage**
+- Open the homepage (root route `/`)
+- You'll see a hero section with city names displayed
+
+**Step 2: Hover Over Cities**
+- Hover your mouse over any city (Berlin, London, New York, Tokyo, Seoul)
+- Watch the smooth animation:
+  - City name slides up and fades out
+  - Flight duration slides in from below with golden color (#cb9f4d)
+  - Example: "Berlin" → "2h 45m"
+
+**Step 3: Observe Real-time Updates**
+- Flight times are fetched from `/api/flights` API endpoint
+- Updates automatically every 30 seconds
+- Each city shows its flight duration from your location
+- API returns both `flightTime` (duration) and `nextFlight` (timestamp)
+
+**Step 4: Check API Endpoint**
+- Open browser DevTools → Network tab
+- See requests to `/api/flights?city=Berlin` etc.
+- Response includes city, flightTime, and nextFlight timestamp
+
+**What to Highlight:**
+- ✅ Interactive UI element adds engagement to homepage
+- ✅ API integration for dynamic content (currently mock data, ready for real API)
+- ✅ Smooth GSAP animations for professional feel
+- ✅ Real-time updates without page refresh
+- ✅ Hover interaction provides immediate feedback
+
+**Technical Details:**
+- Uses SvelteKit API route: `/api/flights/+server.ts`
+- Currently returns mock flight duration data
+- In production, would connect to real flight API (e.g., Amadeus, Skyscanner)
+- API endpoint supports query parameter: `?city=Berlin`
+- Returns JSON: `{ city, flightTime, nextFlight }`
+
+---
 
 ### **Part 1: Creating a Custom Template**
 
