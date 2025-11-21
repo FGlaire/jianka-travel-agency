@@ -21,6 +21,9 @@
 This system is designed to help travel agencies process customer data from CSV files with intelligent field mapping, validation, and template-based extraction. The system handles various CSV formats and allows users to create custom templates for different data structures.
 
 **What we'll demonstrate today:**
+- User authentication (sign up, login, logout)
+- Two-factor authentication (2FA) setup and usage
+- Account settings and password management
 - Homepage flight time display (interactive hover feature)
 - CSV file upload and parsing
 - Custom template creation with drag-and-drop field mapping
@@ -43,6 +46,10 @@ This system is designed to help travel agencies process customer data from CSV f
   - `/api/templates` - Template CRUD operations
   - `/api/csv-files` - CSV file management
   - `/api/flights` - Flight time data (homepage feature)
+  - `/api/2fa/setup` - Generate 2FA QR code and secret
+  - `/api/2fa/verify` - Verify 2FA setup code
+  - `/api/2fa/login-verify` - Verify 2FA code during login
+  - `/api/2fa/disable` - Disable 2FA for user
 - **Supabase** - Database and authentication
   - PostgreSQL database
   - Row Level Security (RLS) for data protection
@@ -54,6 +61,9 @@ This system is designed to help travel agencies process customer data from CSV f
 - **CSV Parsing** - Custom parsing logic with position-based and name-based mapping
 - **GSAP Animations** - Smooth transitions and scroll-triggered animations
 - **Flight Time API** - Real-time flight duration display on homepage
+- **Supabase Auth** - Complete authentication system with email/password
+- **Two-Factor Authentication** - TOTP-based 2FA using `speakeasy` and `qrcode`
+- **reCAPTCHA** - Bot protection on authentication forms
 
 ### Database Schema
 - `csv_files` table - Stores uploaded CSV data, raw text, and extraction results
@@ -96,6 +106,16 @@ This system is designed to help travel agencies process customer data from CSV f
 ---
 
 ## ✨ Key Features
+
+### -1. **Authentication & Security System**
+- **User Registration**: Sign up with email and strong password
+- **User Login**: Secure authentication with Supabase
+- **Two-Factor Authentication (2FA)**: TOTP-based 2FA with QR code setup
+- **Password Management**: Change password with strength validation
+- **reCAPTCHA Integration**: Bot protection on all auth forms
+- **Account Settings**: Comprehensive user account management
+- **Session Management**: Secure logout functionality
+- **Email Verification**: Required for new account activation
 
 ### 0. **Homepage Flight Time Display** (Bonus Feature)
 - **Interactive City Hover**: Hover over cities (Berlin, London, New York, Tokyo, Seoul) to see flight durations
@@ -151,6 +171,223 @@ This system is designed to help travel agencies process customer data from CSV f
 ---
 
 ## 🎬 Step-by-Step Demonstration
+
+### **Part -1: Authentication System** (Prerequisites)
+
+**Overview:**
+Before using the CSV extraction system, users must authenticate. The system includes comprehensive authentication features with two-factor authentication (2FA) support.
+
+---
+
+#### **A. User Sign Up**
+
+**Step 1: Navigate to Sign Up**
+- Click "LOGIN" button in navigation (if not logged in)
+- Click "Sign Up" link at bottom of login page
+- Or navigate directly to `/signup`
+
+**Step 2: Fill Registration Form**
+- **Email**: Enter a valid email address
+- **Password**: Must meet requirements:
+  - Minimum 8 characters
+  - At least one uppercase letter
+  - At least one lowercase letter
+  - At least one number
+  - At least one special character (!@#$%^&*...)
+- **Confirm Password**: Re-enter password
+- **Password Visibility**: Toggle eye icon to show/hide password
+
+**Step 3: Complete reCAPTCHA**
+- Check the "I'm not a robot" reCAPTCHA box
+- Complete any verification challenges if prompted
+
+**Step 4: Submit Registration**
+- Click "Sign Up" button
+- System validates password strength in real-time
+- If valid, account is created
+- Email verification is sent to your email address
+
+**Step 5: Verify Email**
+- Check your email inbox
+- Click the verification link from Supabase
+- Account is now activated
+
+**What to Highlight:**
+- ✅ Strong password requirements enforced
+- ✅ Real-time password validation feedback
+- ✅ reCAPTCHA bot protection
+- ✅ Email verification required
+- ✅ Password visibility toggle for UX
+
+---
+
+#### **B. User Login**
+
+**Step 1: Navigate to Login**
+- Click "LOGIN" button in navigation
+- Or navigate to `/login`
+
+**Step 2: Enter Credentials**
+- **Email**: Enter your registered email
+- **Password**: Enter your password
+- **Password Visibility**: Toggle to verify password
+- **reCAPTCHA**: Complete verification
+
+**Step 3: Submit Login**
+- Click "Sign In" button
+- System authenticates via Supabase
+- If 2FA is enabled, proceed to Step 4
+- If 2FA is not enabled, login completes and redirects to homepage
+
+**Step 4: Two-Factor Authentication (if enabled)**
+- If user has 2FA enabled, a second step appears
+- **Enter 6-digit code**: Get code from your authenticator app (Google Authenticator, Authy, etc.)
+- Click "Verify Code"
+- Upon successful verification, redirects to homepage
+
+**What to Highlight:**
+- ✅ Secure authentication via Supabase
+- ✅ Seamless 2FA integration
+- ✅ Automatic redirect after login
+- ✅ Error messages for invalid credentials
+
+---
+
+#### **C. Setting Up Two-Factor Authentication (2FA)**
+
+**Step 1: Navigate to Account Settings**
+- After logging in, click your email in navigation dropdown
+- Select "Account Settings"
+- Or navigate to `/account-settings`
+
+**Step 2: Find 2FA Section**
+- Scroll to "Two-Factor Authentication" section
+- If 2FA is not enabled, you'll see "Enable 2FA" button
+
+**Step 3: Generate QR Code**
+- Click "Enable 2FA" button
+- System generates a secret and QR code
+- QR code is displayed on screen
+
+**Step 4: Scan QR Code**
+- Open your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)
+- Scan the QR code displayed on screen
+- Or manually enter the secret key if QR scanning isn't available
+
+**Step 5: Verify Setup**
+- Enter the 6-digit code from your authenticator app
+- Click "Verify and Enable"
+- System verifies the code matches
+- If successful, 2FA is enabled for your account
+
+**Step 6: Confirm 2FA Status**
+- Page shows "2FA is enabled" status
+- Green checkmark indicates success
+- You can now disable 2FA if needed (requires verification)
+
+**What to Highlight:**
+- ✅ Industry-standard TOTP (Time-based One-Time Password)
+- ✅ QR code for easy setup
+- ✅ Manual secret key option available
+- ✅ Verification required before enabling
+- ✅ Can be disabled later if needed
+
+---
+
+#### **D. Logging In with 2FA Enabled**
+
+**Step 1: Initial Login**
+- Enter email and password as usual
+- Complete reCAPTCHA
+- Click "Sign In"
+
+**Step 2: 2FA Prompt**
+- After successful password authentication, 2FA step appears
+- Form changes to show 2FA code input field
+- Message: "Please enter your 2FA code to complete login"
+
+**Step 3: Get Code from Authenticator**
+- Open your authenticator app
+- Find the code for "JIANKA Travel Agency" (or your email)
+- Code refreshes every 30 seconds
+
+**Step 4: Enter and Verify**
+- Enter the 6-digit code
+- Click "Verify Code"
+- System verifies code using TOTP algorithm
+- If valid, login completes and redirects
+
+**What to Highlight:**
+- ✅ Two-step authentication for enhanced security
+- ✅ Time-based codes (30-second window)
+- ✅ Seamless user experience
+- ✅ Clear error messages for invalid codes
+
+---
+
+#### **E. Account Settings Management**
+
+**Step 1: Access Account Settings**
+- Click your email in navigation dropdown
+- Select "Account Settings"
+- Page shows comprehensive account management
+
+**Step 2: View Account Information**
+- **Email**: Your registered email (read-only)
+- **User ID**: Unique identifier
+- **Account Created**: Registration date
+- **2FA Status**: Enabled/Disabled indicator
+
+**Step 3: Change Password**
+- Scroll to "Change Password" section
+- Enter current password
+- Enter new password (must meet requirements)
+- Confirm new password
+- Toggle visibility for each field
+- Click "Change Password"
+- System validates and updates password
+
+**Step 4: Manage 2FA**
+- **Enable 2FA**: If disabled, follow setup process (see Part C)
+- **Disable 2FA**: If enabled, click "Disable 2FA"
+  - Requires verification code to disable
+  - Enter code from authenticator
+  - Confirm disable action
+
+**Step 5: Logout**
+- Scroll to bottom of page
+- Click "Sign Out" button (red/danger style)
+- Or use logout button in navigation dropdown
+- Session is terminated
+- Redirects to homepage (logged out state)
+
+**What to Highlight:**
+- ✅ Centralized account management
+- ✅ Secure password change with validation
+- ✅ 2FA can be enabled/disabled
+- ✅ Easy logout from multiple locations
+
+---
+
+#### **F. Logout**
+
+**Method 1: Navigation Dropdown**
+- Click your email in top navigation
+- Click "LOGOUT" button in dropdown
+- Session ends, redirects to homepage
+
+**Method 2: Account Settings**
+- Navigate to Account Settings
+- Scroll to bottom
+- Click "Sign Out" button
+- Session ends, redirects to homepage
+
+**What to Highlight:**
+- ✅ Multiple logout options for convenience
+- ✅ Clean session termination
+- ✅ Automatic redirect after logout
+
+---
 
 ### **Part 0: Homepage Flight Time Feature** (Optional Demo)
 
