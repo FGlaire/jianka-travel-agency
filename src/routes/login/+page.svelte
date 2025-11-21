@@ -361,9 +361,9 @@
   .password-field {
     width: 100%;
     padding-right: 3rem; /* Make room for the toggle button */
-    font-family: 'Courier New', monospace;
+    font-family: inherit; /* Use same font as other inputs */
     font-size: 1rem;
-    letter-spacing: 0.1em;
+    letter-spacing: normal; /* Remove extra letter spacing */
   }
 
   .password-toggle {

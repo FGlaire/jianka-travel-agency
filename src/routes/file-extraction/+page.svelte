@@ -232,7 +232,22 @@
   }
   
   // Reactive ordered fields based on selected template
-  $: orderedFields = getOrderedFields(selectedTemplate);
+  // Initialize with default order
+  let orderedFields: typeof travelFields = travelFields;
+  
+  // Use try-catch to prevent crashes and memoize to prevent infinite loops
+  $: {
+    try {
+      const newOrderedFields = getOrderedFields(selectedTemplate);
+      // Only update if actually different to prevent unnecessary re-renders
+      if (JSON.stringify(newOrderedFields.map(f => f.key)) !== JSON.stringify(orderedFields.map(f => f.key))) {
+        orderedFields = newOrderedFields;
+      }
+    } catch (error) {
+      console.error('Error calculating ordered fields:', error);
+      orderedFields = travelFields; // Fallback to default order
+    }
+  }
 
   // Function to map CSV headers to expected field keys
   function mapHeaderToFieldKey(header: string): string {
@@ -727,13 +742,14 @@
 
     isExtracting = true;
     extractionProgress = 0;
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
 
     // Simulate extraction progress
-    const progressInterval = setInterval(() => {
+    progressInterval = setInterval(() => {
       extractionProgress += Math.random() * 15;
       if (extractionProgress >= 100) {
         extractionProgress = 100;
-        clearInterval(progressInterval);
+        if (progressInterval) clearInterval(progressInterval);
       }
     }, 150);
 
@@ -777,95 +793,120 @@
         }
       });
       
-      // Process and validate data
+      // Process and validate data with error handling
       const processedData = uniqueData.map((row: any, index: number) => {
-        const validatedRow = { ...row, _rowIndex: index + 1 };
-        const errors: string[] = [];
+        try {
+          const validatedRow = { ...row, _rowIndex: index + 1 };
+          const errors: string[] = [];
 
-        // Add column validation errors if any (but don't fail individual records for column structure issues)
-        if (selectedFile.columnValidation && !selectedFile.columnValidation.isValid) {
-          // Only add warnings, not errors, for column structure issues
-          console.log('Column validation warnings:', selectedFile.columnValidation.warnings);
-          // Don't add column errors to individual row validation
-        }
-
-        // Validate each field
-        travelFields.forEach(field => {
-          const value = row[field.key];
-          
-          if (field.required && (!value || value.trim() === '')) {
-            errors.push(`${field.name} is required`);
+          // Add column validation errors if any (but don't fail individual records for column structure issues)
+          if (selectedFile.columnValidation && !selectedFile.columnValidation.isValid) {
+            // Only add warnings, not errors, for column structure issues
+            console.log('Column validation warnings:', selectedFile.columnValidation.warnings);
+            // Don't add column errors to individual row validation
           }
 
-          if (value && field.type === 'email' && !isValidEmail(value)) {
-            errors.push(`${field.name} must be a valid email`);
-          }
+          // Validate each field with defensive checks
+          travelFields.forEach(field => {
+            try {
+              const value = row[field.key];
+              
+              // Skip validation if value is null/undefined (but check required fields)
+              if (field.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
+                errors.push(`${field.name} is required`);
+                return; // Skip other validations for required empty fields
+              }
 
-          if (value && field.type === 'date' && !isValidDate(value)) {
-            errors.push(`${field.name} must be a valid date`);
-          }
+              // Only validate if value exists and is a string/number
+              if (!value || (typeof value !== 'string' && typeof value !== 'number')) {
+                return;
+              }
 
-          if (value && field.type === 'number' && isNaN(Number(value))) {
-            errors.push(`${field.name} must be a valid number`);
-          }
+              const stringValue = String(value);
 
-          if (value && field.type === 'id' && !isValidId(value)) {
-            errors.push(`${field.name} must be numeric only (no letters)`);
-          }
+              if (field.type === 'email' && !isValidEmail(stringValue)) {
+                errors.push(`${field.name} must be a valid email`);
+              }
 
-          if (value && field.type === 'phone' && !isValidPhone(value)) {
-            errors.push(`${field.name} must be a valid phone number`);
-          }
+              if (field.type === 'date' && !isValidDate(stringValue)) {
+                errors.push(`${field.name} must be a valid date`);
+              }
 
-          if (value && field.type === 'passport' && !isValidPassportNumber(value)) {
-            errors.push(`${field.name} must be 6-12 alphanumeric characters`);
-          }
+              if (field.type === 'number' && isNaN(Number(stringValue))) {
+                errors.push(`${field.name} must be a valid number`);
+              }
 
-          if (value && field.type === 'postal' && !isValidPostalCode(value)) {
-            errors.push(`${field.name} must be numeric only`);
-          }
+              if (field.type === 'id' && !isValidId(stringValue)) {
+                errors.push(`${field.name} must be numeric only (no letters)`);
+              }
 
-          if (value && field.type === 'insurance' && !isValidTravelInsurance(value)) {
-            errors.push(`${field.name} must be 'yes' or 'no'`);
-          }
+              if (field.type === 'phone' && !isValidPhone(stringValue)) {
+                errors.push(`${field.name} must be a valid phone number`);
+              }
 
-          // New stricter validations
-          if (value && field.type === 'name' && !isValidName(value)) {
-            errors.push(`${field.name} must contain only letters, spaces, hyphens, and apostrophes (no emojis, numbers, or special characters)`);
-          }
+              if (field.type === 'passport' && !isValidPassportNumber(stringValue)) {
+                errors.push(`${field.name} must be 6-12 alphanumeric characters`);
+              }
 
-          if (value && field.type === 'language' && !isValidLanguage(value)) {
-            errors.push(`${field.name} must contain only letters, spaces, hyphens, and apostrophes (no emojis, numbers, or special characters)`);
-          }
+              if (field.type === 'postal' && !isValidPostalCode(stringValue)) {
+                errors.push(`${field.name} must be numeric only`);
+              }
 
-          if (value && field.type === 'text' && !isValidText(value, false)) {
-            errors.push(`${field.name} must contain only letters, spaces, and basic punctuation (no emojis or special characters)`);
-          }
+              if (field.type === 'insurance' && !isValidTravelInsurance(stringValue)) {
+                errors.push(`${field.name} must be 'yes' or 'no'`);
+              }
 
-          if (value && field.type === 'address' && !isValidAddress(value)) {
-            errors.push(`${field.name} must contain only letters, numbers, spaces, and basic address characters (no emojis or special characters)`);
-          }
+              // New stricter validations
+              if (field.type === 'name' && !isValidName(stringValue)) {
+                errors.push(`${field.name} must contain only letters, spaces, hyphens, and apostrophes (no emojis, numbers, or special characters)`);
+              }
 
-          if (value && field.type === 'dateRange' && !isValidDateRange(value)) {
-            errors.push(`${field.name} must contain only letters, numbers, spaces, and date separators (no emojis or special characters)`);
-          }
-        });
+              if (field.type === 'language' && !isValidLanguage(stringValue)) {
+                errors.push(`${field.name} must contain only letters, spaces, hyphens, and apostrophes (no emojis, numbers, or special characters)`);
+              }
 
-        validatedRow._errors = errors;
-        validatedRow._isValid = errors.length === 0;
-        
-        // Log first few validation results for debugging
-        if (index < 3) {
-          console.log(`Row ${index + 1} validation:`, {
-            id: row.id,
-            email: row.email,
-            errors: errors,
-            isValid: errors.length === 0
+              if (field.type === 'text' && !isValidText(stringValue, false)) {
+                errors.push(`${field.name} must contain only letters, spaces, and basic punctuation (no emojis or special characters)`);
+              }
+
+              if (field.type === 'address' && !isValidAddress(stringValue)) {
+                errors.push(`${field.name} must contain only letters, numbers, spaces, and basic address characters (no emojis or special characters)`);
+              }
+
+              if (field.type === 'dateRange' && !isValidDateRange(stringValue)) {
+                errors.push(`${field.name} must contain only letters, numbers, spaces, and date separators (no emojis or special characters)`);
+              }
+            } catch (fieldError) {
+              console.error(`Error validating field ${field.key} in row ${index + 1}:`, fieldError);
+              // Don't add error to prevent cascading failures
+            }
           });
-          console.log(`Row ${index + 1} detailed errors:`, errors);
+
+          validatedRow._errors = errors;
+          validatedRow._isValid = errors.length === 0;
+          
+          // Log first few validation results for debugging
+          if (index < 3) {
+            console.log(`Row ${index + 1} validation:`, {
+              id: row.id,
+              email: row.email,
+              errors: errors,
+              isValid: errors.length === 0
+            });
+            console.log(`Row ${index + 1} detailed errors:`, errors);
+          }
+          
+          return validatedRow;
+        } catch (rowError) {
+          console.error(`Error processing row ${index + 1}:`, rowError);
+          // Return a failed row with error
+          return {
+            ...row,
+            _rowIndex: index + 1,
+            _errors: [`Error processing row: ${rowError instanceof Error ? rowError.message : 'Unknown error'}`],
+            _isValid: false
+          };
         }
-        
-        return validatedRow;
       });
 
       // Debug: Check processedData before filtering
@@ -935,9 +976,19 @@
 
     } catch (error) {
       console.error('Error extracting data:', error);
-      alert('Error extracting data');
+      // Clear progress interval if still running
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Error extracting data: ${errorMessage}\n\nPlease check the console for more details.`);
       isExtracting = false;
       extractionProgress = 0;
+      // Reset data arrays to prevent showing corrupted data
+      extractedData = [];
+      successData = [];
+      failedData = [];
     }
   }
 
